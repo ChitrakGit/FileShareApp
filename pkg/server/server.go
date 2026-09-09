@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"fileshare/pkg/discovery"
 	"fileshare/pkg/transfer"
@@ -56,6 +57,9 @@ func (s *Server) Start() error {
 	// 2. API Endpoints
 	mux.HandleFunc("/api/info", s.handleInfo)
 	mux.HandleFunc("/api/peers", s.handlePeers)
+	mux.HandleFunc("/api/peers/add", s.handlePeersAdd)
+	mux.HandleFunc("/api/peers/remove", s.handlePeersRemove)
+	mux.HandleFunc("/api/peers/scan", s.handleSubnetScan)
 	mux.HandleFunc("/api/upload", s.handleMultipartUpload)
 	mux.HandleFunc("/api/stream-upload", s.handleStreamUpload)
 	mux.HandleFunc("/events", s.handleSSE)
@@ -92,8 +96,106 @@ func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handlePeers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	peers := s.Discovery.Registry.GetActivePeers(discovery.PeerTimeout)
+	peers := s.Discovery.Registry.GetAllPeers(discovery.PeerTimeout)
 	_ = json.NewEncoder(w).Encode(peers)
+}
+
+func (s *Server) handlePeersAdd(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Address string `json:"address"`
+		Name    string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Address == "" {
+		http.Error(w, "Invalid address specified", http.StatusBadRequest)
+		return
+	}
+
+	peer, err := discovery.ProbePeer(req.Address, 8990, 2*time.Second)
+	if err != nil {
+		http.Error(w, "Could not reach device: "+err.Error(), http.StatusBadGateway)
+		return
+	}
+
+	if req.Name != "" {
+		peer.Name = req.Name
+	}
+
+	if err := s.Discovery.Registry.AddSavedPeer(*peer); err != nil {
+		http.Error(w, "Failed to save peer: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(peer)
+}
+
+func (s *Server) handlePeersRemove(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost && r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		var req struct {
+			ID string `json:"id"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		id = req.ID
+	}
+
+	if id == "" {
+		http.Error(w, "Missing peer id or ip", http.StatusBadRequest)
+		return
+	}
+
+	removed, err := s.Discovery.Registry.RemoveSavedPeer(id)
+	if err != nil {
+		http.Error(w, "Failed to remove peer: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": removed,
+	})
+}
+
+func (s *Server) handleSubnetScan(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Subnet string `json:"subnet"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+
+	subnet := req.Subnet
+	if subnet == "" {
+		// Use default local IP subnet
+		localIP := s.Discovery.LocalPeer.IP
+		lastDot := strings.LastIndex(localIP, ".")
+		if lastDot != -1 {
+			subnet = localIP[:lastDot]
+		} else {
+			subnet = "192.168.1"
+		}
+	}
+
+	discovered := discovery.ScanSubnet(subnet, 8990, 400*time.Millisecond)
+	for _, p := range discovered {
+		s.Discovery.Registry.AddOrUpdate(p)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(discovered)
 }
 
 // handleMultipartUpload handles browser drag & drop file/folder uploads

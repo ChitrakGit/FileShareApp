@@ -168,13 +168,21 @@
             </div>
           </div>
 
-          <!-- Manual IP Connect -->
+          <!-- Manual IP Connect & Subnet Scanner -->
           <div class="manual-connect-box">
-            <p class="small-hint">Can't see a device? Connect by IP directly:</p>
-            <div class="ip-input-group">
-              <input type="text" id="manualPeerIp" placeholder="192.168.1.XX:8990" class="form-control form-control-sm">
-              <button class="btn btn-sm btn-secondary" id="btnAddManualPeer">Add</button>
+            <div class="connect-tabs">
+              <span class="small-hint font-bold">Add Device (Across Routers / LAN)</span>
             </div>
+            <div class="ip-input-group mb-2">
+              <input type="text" id="manualPeerIp" placeholder="192.168.1.XX:8990" class="form-control form-control-sm flex-1">
+              <input type="text" id="manualPeerName" placeholder="Name (e.g. Office PC)" class="form-control form-control-sm peer-name-input">
+              <button class="btn btn-sm btn-primary" id="btnAddManualPeer">Save Device</button>
+            </div>
+            <div class="subnet-scan-group">
+              <input type="text" id="scanSubnetInput" placeholder="Subnet (e.g. 192.168.1)" class="form-control form-control-sm">
+              <button class="btn btn-sm btn-secondary" id="btnScanSubnet">Scan Subnet</button>
+            </div>
+            <p class="small-hint" id="peerActionStatus" style="display: none; margin-top: 6px;"></p>
           </div>
         </div>
 

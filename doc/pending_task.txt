@@ -1,0 +1,1 @@
+save tha all connected device with device ID and LAN collection info and other important things in a json file inside store directory. 

@@ -649,9 +649,64 @@ body {
   margin-bottom: 8px;
 }
 
+.font-bold {
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.mb-2 {
+  margin-bottom: 8px;
+}
+
 .ip-input-group {
   display: flex;
   gap: 8px;
+}
+
+.peer-name-input {
+  max-width: 130px;
+}
+
+.subnet-scan-group {
+  display: flex;
+  gap: 8px;
+}
+
+.badge-saved {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  padding: 1px 6px;
+  border-radius: 12px;
+  margin-left: 6px;
+}
+
+.peer-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-delete-peer {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #f87171;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-delete-peer:hover {
+  background: rgba(239, 68, 68, 0.25);
+  transform: scale(1.05);
 }
 
 /* History List */

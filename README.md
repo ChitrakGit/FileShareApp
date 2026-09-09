@@ -1,114 +1,270 @@
-# FileShare - High-Speed LAN & Wi-Fi File Sharing
+# 🚀 FileShare
 
-A lightweight, high-performance file sharing application built in Go. Send individual files, batches of files, or complete nested directories across your local Wi-Fi or LAN with zero cloud dependencies.
+> High-speed, peer-to-peer file and folder sharing over local Wi-Fi and LAN networks. Built with Go for maximum throughput and zero cloud dependencies.
 
-Features both an intuitive **Command-Line Interface (CLI)** and a sleek, modern **Web UI** with drag-and-drop support, peer radar discovery, and QR code pairing for mobile devices.
-
----
-
-## Features
-
-- **🚀 Ultra-Fast LAN Speed**: Transfers files directly across your Wi-Fi or Ethernet at full local network bandwidth.
-- **📁 Multi-File & Entire Folder Streaming**: Send entire folder structures recursively in one go. Data streams on the fly with zero temporary files created on disk.
-- **📡 Automatic Peer Discovery**: Devices automatically discover each other over local UDP broadcasts without needing manual configuration.
-- **📱 Instant Mobile Pairing**: Display a Wi-Fi QR code in the Web UI to let any smartphone on the network upload/download files via mobile browser without installing any app.
-- **🛡️ Secure by Design**: Built-in path traversal guards (`pathGuard`), optional 6-digit session PINs, and explicit accept/decline permissions.
-- **📦 Single Standalone Binary**: The entire Web UI (HTML, CSS, JavaScript) is embedded directly into the Go executable using `//go:embed`.
+[![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Mobile-blue)](https://github.com/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
-## Quick Start
-
-### 1. Launch the Web UI
-```bash
-fileshare ui
-```
-This launches the local server, announces presence on Wi-Fi, and automatically opens `http://localhost:8990` in your browser.
-
-Custom port and download directory:
-```bash
-fileshare ui --port 9000 --dir C:\MyReceivedFiles
-```
-
-### 2. Discover Devices on Wi-Fi (CLI)
-```bash
-fileshare scan
-```
-Scans your subnet and displays all active FileShare nodes:
-```
-Found 2 peer(s) on the network:
-----------------------------------------------------------------------
-NAME                     ADDRESS                OS        
-----------------------------------------------------------------------
-Alice-Laptop             192.168.1.42:8990      windows   
-Home-Server              192.168.1.15:8990      linux     
-----------------------------------------------------------------------
-```
-
-### 3. Send Files & Folders (CLI)
-Send single or multiple files:
-```bash
-fileshare send report.pdf photo.jpg --to 192.168.1.42:8990
-```
-
-Send entire directories (preserves complete folder hierarchy):
-```bash
-fileshare send ./ProjectSource/ ./Data/ --to 192.168.1.42:8990
-```
-
-With security PIN:
-```bash
-fileshare send ./Confidential/ --to 192.168.1.42:8990 --pin 482910
-```
-
-### 4. Headless Receiver Daemon (CLI)
-Run as a background listener on a server:
-```bash
-fileshare receive --dir ~/Downloads/FileShare
-```
+## 📖 Table of Contents
+- [Features](#-features)
+- [Architecture & How It Works](#-architecture--how-it-works)
+- [How to Build from Source](#-how-to-build-from-source)
+- [Quick Start Guide](#-quick-start-guide)
+  - [1. Web UI Mode (Recommended)](#1-web-ui-mode-recommended)
+  - [2. CLI Mode](#2-cli-mode)
+- [Working Across Two Routers (Subnets)](#-working-across-two-routers-subnets)
+- [CLI Command Reference](#-cli-command-reference)
+- [Security & Safety](#-security--safety)
+- [Troubleshooting & FAQs](#-troubleshooting--faqs)
 
 ---
 
-## Project Structure
+## ✨ Features
+
+- **⚡ Full Wire & Wi-Fi Speed**: Transfers files directly between devices on your local network at maximum bandwidth (up to 1 Gbps+ on Ethernet/Wi-Fi 6) without routing through any external cloud server.
+- **📁 Multi-File & Entire Directory Streaming**: Send single files, batches of selected files, or complete nested folder hierarchies in one go. Data streams on the fly with **zero temporary files created on disk**.
+- **💻 Dual Interface (CLI & Web UI)**:
+  - **Modern Web Dashboard**: Glassmorphic dark-mode UI with drag-and-drop dropzone, live progress gauges (MB/s, ETA, % completion), and nearby device radar.
+  - **Power-User CLI**: Scriptable terminal commands with animated progress bars for servers and headless machines.
+- **📱 Instant Mobile Phone Pairing (QR Code)**:
+  - Scan the Wi-Fi QR code from your phone's camera to open FileShare on your mobile browser (iOS/Android) and send/receive files without installing any app.
+- **📡 Smart Auto-Discovery & Persistent Device Manager**:
+  - Automatically discovers peers on the same subnet using UDP beacons (`53535`).
+  - Active subnet scanner (`fileshare scan --subnet 192.168.1`) for multi-router setups.
+  - Permanent device registry (`fileshare add`) so you can send files by **device name** (e.g. `--to "Office-PC"`) without remembering IPs.
+- **📦 Single Standalone Executable**:
+  - Compiled into a single binary (`fileshare.exe` on Windows or `fileshare` on Linux/macOS) with the entire Web UI baked inside via `//go:embed`. No Node.js, Python, or runtime dependencies required.
+- **🛡️ Built-in Security**:
+  - Strict path traversal guards (`pathGuard`) to prevent malicious `../` overwrites.
+  - Optional 6-digit session PIN authentication.
+
+---
+
+## 🏗 Architecture & How It Works
 
 ```
-FileShare/
-├── cmd/
-│   └── fileshare/
-│       └── main.go           # CLI entry point (scan, send, receive, ui)
-├── pkg/
-│   ├── discovery/
-│   │   ├── beacon.go         # UDP broadcast & listener
-│   │   └── peer.go           # Peer registry & timeouts
-│   ├── transfer/
-│   │   ├── archiver.go       # Tar streaming for files & folders
-│   │   ├── extractor.go      # Tar unpacker & path traversal security
-│   │   └── progress.go       # Terminal progress bar & speed calculator
-│   ├── server/
-│   │   └── server.go         # HTTP API & Web UI static asset server
-│   └── client/
-│       └── client.go         # Streaming client with live progress bar
-├── web/
-│   ├── embed.go              # //go:embed embedding frontend into binary
-│   └── dist/
-│       ├── index.html        # Modern dashboard layout
-│       ├── css/style.css     # Glassmorphism dark mode styling
-│       └── js/app.js         # Dropzone, folder reader & WebSocket client
-├── go.mod
-└── README.md
+ ┌────────────────────────────────────────────────────────┐
+ │                      User Layer                        │
+ │    CLI (`fileshare`)    │    Web UI / Mobile Browser   │
+ └───────────┬─────────────┴────────────────┬─────────────┘
+             │                              │
+ ┌───────────┴──────────────────────────────┴─────────────┐
+ │                   Application Core                     │
+ │  ┌────────────────────┐ ┌───────────────────────────┐  │
+ │  │  Discovery Engine  │ │      Transfer Engine      │  │
+ │  │ - UDP Beacon (LAN) │ │ - On-the-fly Tar Stream   │  │
+ │  │ - Active Subnet    │ │ - Chunked HTTP Streaming  │  │
+ │  │ - Persistent Store │ │ - Live Progress & ETA     │  │
+ │  └────────────────────┘ └───────────────────────────┘  │
+ │  ┌────────────────────┐ ┌───────────────────────────┐  │
+ │  │   Security Layer   │ │      HTTP / WS Server     │  │
+ │  │ - Path Guard       │ │ - Embedded Static Assets  │  │
+ │  │ - 6-Digit PIN Auth │ │ - REST API & Event Stream │  │
+ │  └────────────────────┘ └───────────────────────────┘  │
+ └───────────────────────────┬────────────────────────────┘
+                             │ Local Wi-Fi / LAN Network
+ ┌───────────────────────────┴────────────────────────────┐
+ │                      Remote Peer                       │
+ └────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Building from Source
+## 🛠 How to Build from Source
 
-```bash
+### Prerequisites
+- [Go 1.22 or newer](https://go.dev/dl/) installed. Verify with:
+  ```bash
+  go version
+  ```
+
+### 1. Build for Windows
+```powershell
+# Open terminal in project root
+cd "C:\Company Files\Study\FileShare"
+
 # Build standalone executable
 go build -o fileshare.exe ./cmd/fileshare
-
-# Cross-compile for Linux (Raspberry Pi, VPS)
-GOOS=linux GOARCH=amd64 go build -o fileshare-linux ./cmd/fileshare
-
-# Cross-compile for macOS
-GOOS=darwin GOARCH=arm64 go build -o fileshare-macos ./cmd/fileshare
 ```
+
+### 2. Cross-Compile for Other Platforms
+You can compile binaries for other devices directly from your machine:
+
+```powershell
+# Linux (Ubuntu, Debian, Raspberry Pi, Home Server)
+$env:GOOS="linux"; $env:GOARCH="amd64"; go build -o fileshare-linux ./cmd/fileshare
+
+# macOS (Apple Silicon M1/M2/M3)
+$env:GOOS="darwin"; $env:GOARCH="arm64"; go build -o fileshare-macos-arm64 ./cmd/fileshare
+
+# macOS (Intel)
+$env:GOOS="darwin"; $env:GOARCH="amd64"; go build -o fileshare-macos-intel ./cmd/fileshare
+```
+
+---
+
+## 🚀 Quick Start Guide
+
+### 1. Web UI Mode (Recommended)
+
+Simply run:
+```powershell
+.\fileshare.exe ui
+```
+1. FileShare starts the local server and **automatically opens your browser** at `http://localhost:8990`.
+2. Other computers on the same network can access it at `http://<your-ip>:8990`.
+3. **To connect a smartphone**: Click the **Mobile Pair** button in the top right and scan the QR code with your phone's camera.
+4. **Drag & Drop**: Drop individual files or entire folders into the dropzone, choose a target device, and click **Send**.
+
+Custom port and custom download directory:
+```powershell
+.\fileshare.exe ui --port 9000 --dir "C:\MyDownloads"
+```
+
+---
+
+### 2. CLI Mode
+
+#### A. Discover Devices on the Network
+```powershell
+.\fileshare.exe scan
+```
+Output:
+```
+Found 2 peer(s) on the network:
+--------------------------------------------------------------------------------
+NAME                     ADDRESS                OS         SAVED   
+--------------------------------------------------------------------------------
+Alice-MacBook            192.168.1.42:8990      darwin     No      
+Home-Server              192.168.1.15:8990      linux      Yes     
+--------------------------------------------------------------------------------
+```
+
+#### B. Send Files or Full Folders
+```powershell
+# Send single or multiple files
+.\fileshare.exe send ./report.pdf ./photo.jpg --to 192.168.1.42:8990
+
+# Send an entire directory (preserves complete nested folder structure)
+.\fileshare.exe send ./ProjectSource/ ./Datasets/ --to 192.168.1.42:8990
+```
+
+Live terminal progress bar:
+```
+[Sender] Preparing to send 48 items (320.5 MB) to 192.168.1.42:8990...
+[████████████████████████░░░░░░]  78.4% | 251.2 MB/320.5 MB | 46.8 MB/s | ETA: 2s
+```
+
+#### C. Run as a Headless Receiver (Server Daemon)
+```powershell
+.\fileshare.exe receive --dir "C:\Downloads\FileShare"
+```
+
+---
+
+## 🌐 Working Across Two Routers (Subnets)
+
+If your network has two routers (e.g. **Router A** is connected to the Internet, and **Router B** is connected to Router A):
+
+```
+       [ Internet ]
+            │
+      [ Router A ] ─── Device A (IP: 192.168.1.50)
+            │
+      [ Router B ] ─── Device B (IP: 192.168.2.75)
+```
+
+Because consumer routers block UDP broadcasts between subnets, follow these simple steps:
+
+### Option 1: Save Device Once (Easiest)
+Save the target machine permanently so you never have to type its IP again:
+```powershell
+# On Device B: Save Device A
+.\fileshare.exe add 192.168.1.50:8990 Device-A
+
+# Send files anytime directly by name:
+.\fileshare.exe send ./my-files/ --to Device-A
+```
+
+### Option 2: Active Subnet Scan
+Scan the adjacent router's subnet in 1 second using active probing:
+```powershell
+# From Device B, scan Router A's subnet:
+.\fileshare.exe scan --subnet 192.168.1
+
+# From Device A, scan Router B's subnet:
+.\fileshare.exe scan --subnet 192.168.2
+```
+
+### Option 3: Access Point Mode (Permanent Fix)
+In Router B's settings, switch operation mode from **Router Mode** to **Access Point (AP) Mode**. Both routers will now share the same subnet (`192.168.1.x`), and automatic discovery will work seamlessly.
+
+---
+
+## 📋 CLI Command Reference
+
+| Command | Description | Example |
+| :--- | :--- | :--- |
+| `fileshare ui` | Launch server & open browser Web UI | `fileshare ui --port 8990 --dir ./recv` |
+| `fileshare scan` | Scan local Wi-Fi/LAN for active peers | `fileshare scan` |
+| `fileshare scan --subnet <prefix>` | Actively probe all 254 IPs on a subnet | `fileshare scan --subnet 192.168.1` |
+| `fileshare add <IP:port> [name]` | Verify and save remote device permanently | `fileshare add 192.168.1.50:8990 Laptop-A` |
+| `fileshare list` | List all saved and discovered peers | `fileshare list` |
+| `fileshare remove <name\|IP>` | Remove a device from saved registry | `fileshare remove Laptop-A` |
+| `fileshare send <paths...> --to <dest>` | Send files/folders to IP or device name | `fileshare send ./photos/ --to Laptop-A` |
+| `fileshare receive` | Run headless receiver daemon | `fileshare receive --dir ~/Downloads` |
+
+---
+
+## 🔒 Security & Safety
+
+1. **Path Traversal Protection**:
+   All incoming files are parsed using `filepath.Clean`. FileShare actively blocks any path containing `../` or root paths (`/` or `C:\`), guaranteeing files can only be saved inside the target download directory.
+2. **Security PIN (Optional)**:
+   Protect transfers on public or office Wi-Fi by requiring a 6-digit PIN:
+   ```powershell
+   # Receiver requires PIN 482910
+   .\fileshare.exe receive --pin 482910
+
+   # Sender must provide matching PIN
+   .\fileshare.exe send ./secret.zip --to 192.168.1.42:8990 --pin 482910
+   ```
+
+---
+
+## 🔧 Troubleshooting & FAQs
+
+### 1. "Device not found" during `fileshare scan`
+- **Cause**: Router AP Isolation or devices connected across different router subnets.
+- **Solution**:
+  - Run active subnet scan: `fileshare scan --subnet 192.168.1`
+  - Or add the device directly: `fileshare add <device-ip>:8990 MyDevice`
+
+### 2. Windows Defender Firewall blocks connections
+- **Cause**: Windows may prompt to allow network access when running for the first time.
+- **Solution**: Click **"Allow access"** on private networks. Alternatively, add a firewall rule via Administrator PowerShell:
+  ```powershell
+  New-NetFirewallRule -DisplayName "FileShare Port 8990" -Direction Inbound -LocalPort 8990 -Protocol TCP -Action Allow
+  New-NetFirewallRule -DisplayName "FileShare Discovery 53535" -Direction Inbound -LocalPort 53535 -Protocol UDP -Action Allow
+  ```
+
+### 3. Port 8990 is already in use
+- **Solution**: Specify a different port:
+  ```powershell
+  .\fileshare.exe ui --port 9090
+  ```
+
+### 4. Mobile phone cannot open Web UI
+- **Check 1**: Make sure your phone is connected to the **same Wi-Fi network** as your computer (not mobile cellular data).
+- **Check 2**: Ensure you typed the computer's local Wi-Fi IP (e.g. `http://192.168.1.15:8990`), **not** `localhost`. Scanning the QR code automatically uses the correct IP.
+
+### 5. Transfers of very large folders (10 GB+)
+- FileShare uses HTTP streaming backpressure with `io.Pipe` and chunked transfer encoding. Even multi-gigabyte files will transfer smoothly without filling your computer's RAM. Ensure the destination drive has sufficient free disk space.
+
+---
+
+## 📄 License
+This project is open-source software licensed under the **MIT License**.

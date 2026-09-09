@@ -31,7 +31,11 @@ const btnCancelTransfer = document.getElementById('btnCancelTransfer');
 const peersList = document.getElementById('peersList');
 const btnRefreshPeers = document.getElementById('btnRefreshPeers');
 const manualPeerIp = document.getElementById('manualPeerIp');
+const manualPeerName = document.getElementById('manualPeerName');
 const btnAddManualPeer = document.getElementById('btnAddManualPeer');
+const scanSubnetInput = document.getElementById('scanSubnetInput');
+const btnScanSubnet = document.getElementById('btnScanSubnet');
+const peerActionStatus = document.getElementById('peerActionStatus');
 
 const localDeviceName = document.getElementById('localDeviceName');
 const localDeviceIp = document.getElementById('localDeviceIp');
@@ -110,7 +114,8 @@ function renderPeers() {
     // Add to dropdown
     const opt = document.createElement('option');
     opt.value = `${peer.ip}:${peer.port}`;
-    opt.textContent = `${peer.name} (${peer.ip}:${peer.port}) - ${peer.os || 'LAN'}`;
+    const savedTag = peer.isSaved ? ' [Saved]' : '';
+    opt.textContent = `${peer.name} (${peer.ip}:${peer.port}) - ${peer.os || 'LAN'}${savedTag}`;
     if (opt.value === currentVal) opt.selected = true;
     targetPeerSelect.appendChild(opt);
 
@@ -123,11 +128,21 @@ function renderPeers() {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
         </div>
         <div>
-          <div class="peer-name">${escapeHtml(peer.name)}</div>
+          <div class="peer-name">
+            ${escapeHtml(peer.name)}
+            ${peer.isSaved ? '<span class="badge-saved">Saved</span>' : ''}
+          </div>
           <div class="peer-meta">${escapeHtml(peer.ip)}:${peer.port} • ${escapeHtml(peer.os || 'LAN')}</div>
         </div>
       </div>
-      <button class="btn btn-sm btn-secondary select-peer-btn">Select</button>
+      <div class="peer-actions">
+        <button class="btn btn-sm btn-secondary select-peer-btn">Select</button>
+        ${peer.isSaved ? `
+          <button class="btn-delete-peer" title="Remove saved device" data-id="${escapeHtml(peer.id || peer.ip)}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+        ` : ''}
+      </div>
     `;
 
     card.querySelector('.select-peer-btn').addEventListener('click', () => {
@@ -137,33 +152,109 @@ function renderPeers() {
       setTimeout(() => card.style.borderColor = '', 1000);
     });
 
+    const deleteBtn = card.querySelector('.btn-delete-peer');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await removeSavedPeer(deleteBtn.dataset.id);
+      });
+    }
+
     peersList.appendChild(card);
   });
 
   checkSendButtonStatus();
 }
 
-// 3. Manual Peer Addition
-btnAddManualPeer.addEventListener('click', () => {
+// 3. Manual Peer Addition & Subnet Scanning
+btnAddManualPeer.addEventListener('click', async () => {
   const ip = manualPeerIp.value.trim();
-  if (!ip) return;
-
-  const [host, port] = ip.includes(':') ? ip.split(':') : [ip, '8990'];
-  const newPeer = {
-    name: `Direct Node (${host})`,
-    ip: host,
-    port: parseInt(port, 10),
-    os: 'Manual'
-  };
-
-  if (!discoveredPeers.some(p => p.ip === host && p.port === newPeer.port)) {
-    discoveredPeers.push(newPeer);
-    renderPeers();
+  if (!ip) {
+    showActionStatus('Please enter an IP address or hostname.', 'error');
+    return;
   }
-  targetPeerSelect.value = `${host}:${port}`;
-  checkSendButtonStatus();
-  manualPeerIp.value = '';
+
+  const name = manualPeerName.value.trim();
+  showActionStatus('Connecting to device to verify...', 'info');
+  btnAddManualPeer.disabled = true;
+
+  try {
+    const res = await fetch('/api/peers/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: ip, name: name })
+    });
+
+    if (res.ok) {
+      const saved = await res.json();
+      showActionStatus(`Successfully saved device: ${saved.name} (${saved.ip}:${saved.port})!`, 'success');
+      manualPeerIp.value = '';
+      manualPeerName.value = '';
+      await fetchPeers();
+      targetPeerSelect.value = `${saved.ip}:${saved.port}`;
+      checkSendButtonStatus();
+    } else {
+      const errText = await res.text();
+      showActionStatus(`Could not reach device: ${errText}`, 'error');
+    }
+  } catch (err) {
+    showActionStatus(`Network error: ${err.message}`, 'error');
+  } finally {
+    btnAddManualPeer.disabled = false;
+  }
 });
+
+btnScanSubnet.addEventListener('click', async () => {
+  const subnet = scanSubnetInput.value.trim();
+  showActionStatus(`Scanning subnet ${subnet || 'local'} (1-254)...`, 'info');
+  btnScanSubnet.disabled = true;
+
+  try {
+    const res = await fetch('/api/peers/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subnet: subnet })
+    });
+
+    if (res.ok) {
+      const found = await res.json();
+      showActionStatus(`Scan complete! Found ${found ? found.length : 0} device(s).`, 'success');
+      await fetchPeers();
+    } else {
+      showActionStatus('Subnet scan failed.', 'error');
+    }
+  } catch (err) {
+    showActionStatus(`Scan error: ${err.message}`, 'error');
+  } finally {
+    btnScanSubnet.disabled = false;
+  }
+});
+
+async function removeSavedPeer(id) {
+  try {
+    const res = await fetch(`/api/peers/remove?id=${encodeURIComponent(id)}`, {
+      method: 'POST'
+    });
+    if (res.ok) {
+      showActionStatus('Saved device removed.', 'info');
+      await fetchPeers();
+    }
+  } catch (err) {
+    console.error('Failed to remove saved peer:', err);
+  }
+}
+
+function showActionStatus(msg, type) {
+  peerActionStatus.style.display = 'block';
+  peerActionStatus.textContent = msg;
+  if (type === 'error') {
+    peerActionStatus.style.color = '#f87171';
+  } else if (type === 'success') {
+    peerActionStatus.style.color = '#34d399';
+  } else {
+    peerActionStatus.style.color = '#94a3b8';
+  }
+}
 
 // 4. Drag & Drop and File/Folder Inputs
 dropzone.addEventListener('dragover', (e) => {

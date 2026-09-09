@@ -39,3 +39,48 @@ func TestPeerRegistry(t *testing.T) {
 		t.Fatalf("expected 0 active peers after timeout, got %d", len(activeAfterTimeout))
 	}
 }
+
+func TestSavedPeers(t *testing.T) {
+	reg := NewPeerRegistry()
+	// Use isolated temp file for test
+	reg.storagePath = t.TempDir() + "/saved_peers.json"
+
+	p := Peer{
+		ID:   "office-pc",
+		Name: "Office-Workstation",
+		IP:   "192.168.1.55",
+		Port: 8990,
+		OS:   "windows",
+	}
+
+	// 1. Add saved peer
+	if err := reg.AddSavedPeer(p); err != nil {
+		t.Fatalf("AddSavedPeer failed: %v", err)
+	}
+
+	// 2. Check GetAllPeers includes it
+	all := reg.GetAllPeers(1 * time.Second)
+	found := false
+	for _, item := range all {
+		if item.Name == "Office-Workstation" && item.IsSaved {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected saved peer to be present in GetAllPeers")
+	}
+
+	// 3. Remove saved peer
+	removed, err := reg.RemoveSavedPeer("office-pc")
+	if err != nil || !removed {
+		t.Fatalf("RemoveSavedPeer failed: %v, removed=%v", err, removed)
+	}
+
+	allAfterRemove := reg.GetAllPeers(1 * time.Second)
+	for _, item := range allAfterRemove {
+		if item.ID == "office-pc" {
+			t.Fatalf("expected peer to be removed, but still found")
+		}
+	}
+}
