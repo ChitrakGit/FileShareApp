@@ -1,0 +1,16 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test artifacts
+test_*/
+downloads/
+
+# IDE / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
