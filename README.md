@@ -47,6 +47,10 @@
 
 ## 🆕 Version History
 
+### What's New in V5
+- **Cross-Platform Autostart**: The desktop application now natively supports "run at startup" on Windows, macOS, and Linux.
+- **Quick Device Pairing**: You can instantly add a device on your local network using the new "Add Device" button right next to the target selector.
+
 ### What's New in V4 (Desktop App Edition)
 - **Native Desktop App**: Packaged with Wails for a full native desktop experience.
 - **System Tray Integration**: Run FileShare silently in the background from your taskbar/system tray.

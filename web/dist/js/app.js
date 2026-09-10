@@ -15,6 +15,15 @@ const payloadTitle = document.getElementById('payloadTitle');
 const payloadSize = document.getElementById('payloadSize');
 const btnClearSelection = document.getElementById('btnClearSelection');
 const targetPeerSelect = document.getElementById('targetPeerSelect');
+const btnQuickAddDevice = document.getElementById('btnQuickAddDevice');
+const quickAddModal = document.getElementById('quickAddModal');
+const btnCloseQuickAddModal = document.getElementById('btnCloseQuickAddModal');
+const btnCancelQuickAdd = document.getElementById('btnCancelQuickAdd');
+const btnConfirmQuickAdd = document.getElementById('btnConfirmQuickAdd');
+const quickAddIp = document.getElementById('quickAddIp');
+const quickAddName = document.getElementById('quickAddName');
+const quickAddStatus = document.getElementById('quickAddStatus');
+
 const optionalPin = document.getElementById('optionalPin');
 const btnSendPayload = document.getElementById('btnSendPayload');
 
@@ -509,6 +518,69 @@ targetPeerSelect.addEventListener('change', checkSendButtonStatus);
 
 function checkSendButtonStatus() {
   btnSendPayload.disabled = !(selectedItems.length > 0 && targetPeerSelect.value);
+}
+
+// 4b. Quick Add Device Modal Logic
+if (btnQuickAddDevice) {
+  btnQuickAddDevice.addEventListener('click', () => {
+    quickAddModal.style.display = 'flex';
+    quickAddIp.value = '';
+    quickAddName.value = '';
+    quickAddStatus.style.display = 'none';
+    quickAddIp.focus();
+  });
+}
+
+function closeQuickAddModal() {
+  quickAddModal.style.display = 'none';
+}
+
+if (btnCloseQuickAddModal) btnCloseQuickAddModal.addEventListener('click', closeQuickAddModal);
+if (btnCancelQuickAdd) btnCancelQuickAdd.addEventListener('click', closeQuickAddModal);
+
+if (btnConfirmQuickAdd) {
+  btnConfirmQuickAdd.addEventListener('click', async () => {
+    let ip = quickAddIp.value.trim();
+    ip = ip.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+    if (!ip) {
+      quickAddStatus.style.display = 'block';
+      quickAddStatus.style.color = '#f87171';
+      quickAddStatus.textContent = 'Please enter an IP address or URL.';
+      return;
+    }
+
+    const name = quickAddName.value.trim();
+    quickAddStatus.style.display = 'block';
+    quickAddStatus.style.color = '#3b82f6';
+    quickAddStatus.textContent = 'Verifying device connection...';
+    btnConfirmQuickAdd.disabled = true;
+
+    try {
+      const res = await fetch('/api/peers/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: ip, name: name })
+      });
+
+      if (res.ok) {
+        const saved = await res.json();
+        await fetchPeers();
+        targetPeerSelect.value = `${saved.ip}:${saved.port}`;
+        checkSendButtonStatus();
+        closeQuickAddModal();
+        showActionStatus(`Successfully saved device: ${saved.name}!`, 'success');
+      } else {
+        const errText = await res.text();
+        quickAddStatus.style.color = '#f87171';
+        quickAddStatus.textContent = `Could not reach device: ${errText}`;
+      }
+    } catch (err) {
+      quickAddStatus.style.color = '#f87171';
+      quickAddStatus.textContent = `Network error: ${err.message}`;
+    } finally {
+      btnConfirmQuickAdd.disabled = false;
+    }
+  });
 }
 
 // 5. Send Payload to Remote Peer

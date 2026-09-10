@@ -108,9 +108,14 @@
             <div class="form-row">
               <div class="form-group flex-1">
                 <label for="targetPeerSelect">Send to Device</label>
-                <select id="targetPeerSelect" class="form-control">
-                  <option value="">Choose a discovered peer...</option>
-                </select>
+                <div style="display: flex; gap: 8px;">
+                  <select id="targetPeerSelect" class="form-control flex-1">
+                    <option value="">Choose a discovered peer...</option>
+                  </select>
+                  <button id="btnQuickAddDevice" class="btn btn-secondary" title="Add Device on the fly" style="padding: 0 12px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  </button>
+                </div>
               </div>
               <div class="form-group pin-group">
                 <label for="optionalPin">Pairing PIN (Optional)</label>
@@ -293,6 +298,32 @@
           <button class="btn btn-danger" id="btnRejectTransfer">Decline</button>
           <button class="btn btn-primary btn-lg" id="btnAcceptTransfer">Accept & Download</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Add Device Modal -->
+  <div class="modal-backdrop" id="quickAddModal" style="display: none;">
+    <div class="modal-card" style="width: 400px; max-width: 95%;">
+      <div class="modal-header">
+        <h3>Add Device Manually</h3>
+        <button class="btn-icon-sm" id="btnCloseQuickAddModal">&times;</button>
+      </div>
+      <div class="modal-body text-center">
+        <p class="modal-desc">Enter the LAN IP address or URL of the target device.</p>
+        <div class="form-group" style="text-align: left; margin-top: 15px;">
+          <label for="quickAddIp">Device URL or IP Address</label>
+          <input type="text" id="quickAddIp" class="form-control" placeholder="http://192.168.1.XX:8990">
+        </div>
+        <div class="form-group" style="text-align: left;">
+          <label for="quickAddName">Optional Name</label>
+          <input type="text" id="quickAddName" class="form-control" placeholder="e.g. John's MacBook">
+        </div>
+        <div style="margin-top: 20px; display: flex; gap: 10px;">
+          <button class="btn btn-secondary flex-1" id="btnCancelQuickAdd">Cancel</button>
+          <button class="btn btn-primary flex-1" id="btnConfirmQuickAdd">Add Device</button>
+        </div>
+        <p class="small-hint" id="quickAddStatus" style="display: none; margin-top: 10px;"></p>
       </div>
     </div>
   </div>

@@ -24,3 +24,8 @@ v4.
 8. "show multiple attached devices"[check device connection while showing] here show PC icon for PC and Tablet Icon for tablet and mobile Icon for mobile. change the icon color with green and gray.
 9. "show multiple attached devices" if same device show multiple use number on the device icon with gray background and number. e.g if two mobile devices connected show mobile icon with 2 on the device icon. the number is red if the device is disconnected and green if the device is connected.
 10. user can search the application as Name "FileShare" in menu.
+ ** done **
+
+ V5. 
+ 1. while selecting device for upload or download show an add device icon also, by clicking on it user can add device on the fly. but to add that device it must be on same LAN Network.
+ 2. make it for linux and mac os also.  
