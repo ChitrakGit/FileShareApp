@@ -4,9 +4,23 @@ V2.
 3. user can see the upload and download speed while transfer the files or folders.
 4. All recived file by default save in C:/Users/Public/Documents/FileShare.
 5. for peer to peer connection if firewall need to be allowed. user can allowed onece and it parmanently allowed by firewall. Nextime It never should ask for permissions.
-
+ *** done ***
 
 v3.
 1. use QR code to connect devices. user can share QR code to another user and the user can scan the QR code to connect to the device.
 2. for add device user can copy  URL  from the app and paste it on the add device section.
 3. for Linux, mac and windows all device can connect.
+*** done ***
+
+
+v4. 
+1. Make an desktopapp over it and use an icon from proper icon/ directory.
+2. user can install it and can run it always. If user close it it by default run in taskbar and also run at startup.
+3. user can check and uncheck that app will always run in taskbar and also run at startup.
+4. user can right click and can close the app from taskbar.
+5. while hide in taskbar, it also float in screen at top right conner like slight drawer(design like glassmorphism). when mouse hover in this the drawer open and show multiple attached devices, where user can drag and drop files then autometically those files will be recived by that desitination device. while drag and drop, also show progress bar of the file transfer.
+6. the app should use quic to transfer files for better performance.
+7. the app should use local network to transfer files for better performance.
+8. "show multiple attached devices"[check device connection while showing] here show PC icon for PC and Tablet Icon for tablet and mobile Icon for mobile. change the icon color with green and gray.
+9. "show multiple attached devices" if same device show multiple use number on the device icon with gray background and number. e.g if two mobile devices connected show mobile icon with 2 on the device icon. the number is red if the device is disconnected and green if the device is connected.
+10. user can search the application as Name "FileShare" in menu.

@@ -17,3 +17,12 @@ func GetFileSystem() http.FileSystem {
 	}
 	return http.FS(sub)
 }
+
+// GetFS returns the embedded fs.FS serving dist contents.
+func GetFS() fs.FS {
+	sub, err := fs.Sub(distFS, "dist")
+	if err != nil {
+		panic(err)
+	}
+	return sub
+}

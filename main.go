@@ -10,13 +10,14 @@ import (
 	"time"
 
 	"fileshare/pkg/client"
+	"fileshare/pkg/desktop"
 	"fileshare/pkg/discovery"
 	"fileshare/pkg/server"
 )
 
 func main() {
 	if len(os.Args) < 2 {
-		runUI(8990, "", "")
+		runDesktop(8990, "", "")
 		return
 	}
 
@@ -52,6 +53,14 @@ func main() {
 		_ = fs.Parse(os.Args[2:])
 		runUI(*port, *dir, *pin)
 
+	case "desktop":
+		fs := flag.NewFlagSet("desktop", flag.ExitOnError)
+		port := fs.Int("port", 8990, "Port for backend server")
+		dir := fs.String("dir", "", "Download directory")
+		pin := fs.String("pin", "", "Optional 6-digit security PIN")
+		_ = fs.Parse(os.Args[2:])
+		runDesktop(*port, *dir, *pin)
+
 	case "help", "--help", "-h":
 		printUsage()
 
@@ -85,8 +94,36 @@ func printUsage() {
 	fmt.Println("  fileshare scan --subnet 192.168.1")
 	fmt.Println("  fileshare add 192.168.1.45:8990 Office-PC")
 	fmt.Println("  fileshare send ./project/ image.png --to Office-PC")
-	fmt.Println("  fileshare send ./data/ --to 192.168.1.45:8990")
 	fmt.Println("  fileshare ui")
+	fmt.Println("  fileshare desktop")
+}
+
+func runDesktop(port int, dir string, pin string) {
+	// Start the backend server in a goroutine so the Wails UI can hit the APIs
+	reg := discovery.NewPeerRegistry()
+	disc, err := discovery.NewService(port, reg)
+	if err != nil {
+		fmt.Printf("Error creating discovery: %v\n", err)
+		os.Exit(1)
+	}
+	disc.Start()
+	defer disc.Stop()
+
+	srv := server.NewServer(port, dir, disc, true, pin)
+	go func() {
+		if err := srv.Start(); err != nil {
+			fmt.Printf("Server error: %v\n", err)
+		}
+	}()
+
+	// Small delay to ensure HTTP is up
+	time.Sleep(200 * time.Millisecond)
+
+	// Launch Native Desktop Application
+	if err := desktop.RunDesktopApp(); err != nil {
+		fmt.Printf("Error running desktop app: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 func runAdd(args []string) {

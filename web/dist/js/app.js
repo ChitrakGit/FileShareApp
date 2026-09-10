@@ -46,6 +46,11 @@ const btnCloseQrModal = document.getElementById('btnCloseQrModal');
 const qrImage = document.getElementById('qrImage');
 const qrUrlText = document.getElementById('qrUrlText');
 
+const btnScanQrCode = document.getElementById('btnScanQrCode');
+const scannerModal = document.getElementById('scannerModal');
+const btnCloseScannerModal = document.getElementById('btnCloseScannerModal');
+let html5QrcodeScanner = null;
+
 const incomingModal = document.getElementById('incomingModal');
 const incomingSenderName = document.getElementById('incomingSenderName');
 const incomingSenderIp = document.getElementById('incomingSenderIp');
@@ -77,6 +82,31 @@ async function init() {
   setInterval(fetchPeers, 3000);
   setupWebSocket();
   loadHistory();
+  
+  // Wails Desktop Integrations
+  if (window.runtime) {
+    window.runtime.EventsOn("mode_changed", (mode) => {
+      const appContainer = document.querySelector('.app-container');
+      const drawerContainer = document.getElementById('drawerContainer');
+      if (mode === "drawer") {
+        appContainer.style.display = 'none';
+        document.body.style.background = 'transparent';
+        document.querySelector('.app-background').style.display = 'none';
+        drawerContainer.style.display = 'flex';
+        renderDrawerPeers();
+      } else {
+        appContainer.style.display = 'flex';
+        document.body.style.background = 'var(--bg-dark)';
+        document.querySelector('.app-background').style.display = 'block';
+        drawerContainer.style.display = 'none';
+      }
+    });
+    
+    // Bind restore UI button
+    document.getElementById('btnRestoreUi')?.addEventListener('click', () => {
+      window.runtime.EventsEmit("restore_ui");
+    });
+  }
 }
 
 // 2. Fetch Discovered Peers
@@ -165,12 +195,105 @@ function renderPeers() {
   });
 
   checkSendButtonStatus();
+  
+  if (document.getElementById('drawerContainer').style.display === 'flex') {
+    renderDrawerPeers();
+  }
+}
+
+// 2b. Render Grouped Peers for Desktop Drawer
+function renderDrawerPeers() {
+  const drawerList = document.getElementById('drawerPeersList');
+  if (!drawerList) return;
+  drawerList.innerHTML = '';
+  
+  // Group by OS
+  const groups = {
+    'windows': [],
+    'darwin': [],
+    'linux': [],
+    'mobile': [],
+    'tablet': [],
+    'other': []
+  };
+  
+  discoveredPeers.forEach(p => {
+    let os = (p.os || 'other').toLowerCase();
+    if (os.includes('android') || os.includes('ios')) {
+       os = 'mobile';
+    } else if (os.includes('ipad')) {
+       os = 'tablet';
+    } else if (!groups[os]) {
+       os = 'other';
+    }
+    groups[os].push(p);
+  });
+  
+  Object.keys(groups).forEach(osType => {
+    const peers = groups[osType];
+    if (peers.length === 0) return;
+    
+    // Determine icon based on OS
+    let svgIcon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>'; // Desktop
+    if (osType === 'mobile') {
+      svgIcon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>';
+    } else if (osType === 'tablet') {
+      svgIcon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>';
+    }
+    
+    // The group represents either a single device or multiple
+    const isActive = peers.some(p => p.online !== false);
+    
+    const div = document.createElement('div');
+    div.className = 'drawer-peer-item';
+    div.innerHTML = `
+      <div class="drawer-peer-icon">
+        ${svgIcon}
+        ${peers.length > 1 ? \`<div class="drawer-badge \${isActive ? 'active' : 'inactive'}">\${peers.length}</div>\` : \`<div class="drawer-badge \${isActive ? 'active' : 'inactive'}" style="width:12px;height:12px;"></div>\`}
+      </div>
+      <div class="drawer-peer-name">${peers.length === 1 ? escapeHtml(peers[0].name) : peers.length + ' Devices'}</div>
+    `;
+    
+    // Setup drag and drop for this group
+    div.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      div.classList.add('dragover');
+    });
+    
+    div.addEventListener('dragleave', () => {
+      div.classList.remove('dragover');
+    });
+    
+    div.addEventListener('drop', (e) => {
+      e.preventDefault();
+      div.classList.remove('dragover');
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+         // Auto-select the first active peer in this group and send
+         const target = peers.find(p => p.online !== false) || peers[0];
+         targetPeerSelect.value = \`\${target.ip}:\${target.port}\`;
+         // Dispatch files to the main drop handler by faking an event to the main dropzone
+         window.runtime.EventsEmit("restore_ui"); // Restore UI to show progress
+         setTimeout(() => {
+             const dt = new DataTransfer();
+             for(let i=0; i<e.dataTransfer.files.length; i++) {
+                 dt.items.add(e.dataTransfer.files[i]);
+             }
+             fileInput.files = dt.files;
+             handleFiles(fileInput.files);
+             btnSendPayload.click();
+         }, 500);
+      }
+    });
+    
+    drawerList.appendChild(div);
+  });
 }
 
 // 3. Manual Peer Addition & Subnet Scanning
 btnAddManualPeer.addEventListener('click', async () => {
   let ip = manualPeerIp.value.trim();
-  ip = ip.replace(/^https?:\/\//i, '');
+  // Strip http://, https://, and any trailing slashes
+  ip = ip.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
   if (!ip) {
     showActionStatus('Please enter an IP address or hostname.', 'error');
     return;
@@ -558,6 +681,51 @@ btnQrCode.addEventListener('click', () => {
 btnCloseQrModal.addEventListener('click', () => {
   qrModal.style.display = 'none';
 });
+
+// 7b. QR Code Scanner for Peer Connection
+if (btnScanQrCode) {
+  btnScanQrCode.addEventListener('click', () => {
+    scannerModal.style.display = 'flex';
+    
+    if (!html5QrcodeScanner) {
+      html5QrcodeScanner = new Html5QrcodeScanner(
+        "reader", { fps: 10, qrbox: 250 }, false);
+    }
+    
+    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+  });
+}
+
+if (btnCloseScannerModal) {
+  btnCloseScannerModal.addEventListener('click', () => {
+    scannerModal.style.display = 'none';
+    if (html5QrcodeScanner) {
+      html5QrcodeScanner.clear().catch(error => {
+        console.error("Failed to clear scanner", error);
+      });
+    }
+  });
+}
+
+function onScanSuccess(decodedText, decodedResult) {
+  // decodedText should be the URL like http://192.168.1.15:8990
+  if (html5QrcodeScanner) {
+    html5QrcodeScanner.clear();
+  }
+  scannerModal.style.display = 'none';
+  
+  // Clean up URL and auto-add
+  let ip = decodedText.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+  manualPeerIp.value = ip;
+  showActionStatus('QR Code scanned successfully! Connecting...', 'success');
+  
+  // Trigger the add button directly
+  btnAddManualPeer.click();
+}
+
+function onScanFailure(error) {
+  // handle scan failure, usually better to ignore and keep scanning
+}
 
 if (btnCopyUrl) {
   btnCopyUrl.addEventListener('click', () => {

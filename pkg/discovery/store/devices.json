@@ -17,7 +17,7 @@
       "discoveryMethod": "UDP_BROADCAST",
       "status": "ONLINE",
       "firstSeen": "2026-09-11T00:56:22.4287923+05:30",
-      "lastSeen": "2026-09-11T00:56:22.4287923+05:30"
+      "lastSeen": "2026-09-11T01:13:00.6896798+05:30"
     },
     "totalTransfers": 0
   },
@@ -39,7 +39,7 @@
       "discoveryMethod": "UDP_BROADCAST",
       "status": "ONLINE",
       "firstSeen": "2026-09-11T00:56:22.4303926+05:30",
-      "lastSeen": "2026-09-11T00:56:22.4303926+05:30"
+      "lastSeen": "2026-09-11T01:13:00.6902113+05:30"
     },
     "totalTransfers": 0
   }

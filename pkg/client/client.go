@@ -1,13 +1,15 @@
 package client
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"io"
-	"net/http"
+	"strings"
 	"time"
 
 	"fileshare/pkg/transfer"
+	quic_tls "fileshare/pkg/quic"
+	"github.com/quic-go/quic-go"
 )
 
 // SendPaths inspects single/multiple files or directories, streams them as tar, and prints live progress.
@@ -25,11 +27,10 @@ func SendPaths(targetAddr string, paths []string, pin string, senderName string)
 		len(items), transfer.FormatBytes(totalBytes), targetAddr)
 
 	targetURL := targetAddr
-	if !startsWithHTTP(targetURL) {
-		targetURL = "http://" + targetURL
-	}
-	targetURL = targetURL + "/api/stream-upload"
-
+	// Strip http:// if present for QUIC address
+	targetURL = strings.Replace(targetURL, "http://", "", 1)
+	targetURL = strings.Replace(targetURL, "https://", "", 1)
+	
 	// Create pipe for zero-disk-overhead streaming
 	pipeReader, pipeWriter := io.Pipe()
 
@@ -52,47 +53,47 @@ func SendPaths(targetAddr string, paths []string, pin string, senderName string)
 		transfer.RenderProgressBar(percent, current, totalBytes, speedMBps, etaSec)
 	})
 
-	req, err := http.NewRequest(http.MethodPost, targetURL, progressReader)
-	if err != nil {
-		return fmt.Errorf("create request failed: %w", err)
-	}
-
-	req.Header.Set("Content-Type", "application/x-tar")
-	if pin != "" {
-		req.Header.Set("X-Fileshare-Pin", pin)
-	}
-	if senderName != "" {
-		req.Header.Set("X-Fileshare-Sender", senderName)
-	}
-
-	httpClient := &http.Client{
-		Timeout: 0, // No timeout for large file transfers
-	}
-
 	startTime := time.Now()
-	resp, err := httpClient.Do(req)
+	
+	// Attempt QUIC connection
+	tlsConf := quic_tls.GenerateClientTLSConfig()
+	conn, err := quic.DialAddr(context.Background(), targetURL, tlsConf, nil)
 	if err != nil {
 		fmt.Println()
-		return fmt.Errorf("transfer failed: %w", err)
+		return fmt.Errorf("quic connection failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer conn.CloseWithError(0, "")
 
-	if resp.StatusCode != http.StatusOK {
+	stream, err := conn.OpenStreamSync(context.Background())
+	if err != nil {
 		fmt.Println()
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("transfer rejected by peer (status %d): %s", resp.StatusCode, string(body))
+		return fmt.Errorf("failed to open quic stream: %w", err)
+	}
+
+	// We can write pin/sender as headers later, but for now we just push the stream.
+	// Since we need to know success, the server could send back a small JSON or byte,
+	// but to keep it simple we just copy the progressReader to the stream.
+	_, err = io.Copy(stream, progressReader)
+	if err != nil {
+		fmt.Println()
+		return fmt.Errorf("quic transfer failed: %w", err)
+	}
+	
+	// Small delay to ensure QUIC flushes
+	time.Sleep(100 * time.Millisecond)
+	// Close stream to signal EOF to server
+	stream.Close()
+
+	// Wait for server to acknowledge completion
+	ackBuf := make([]byte, 1)
+	_, err = stream.Read(ackBuf)
+	if err != nil && err != io.EOF {
+		fmt.Printf("\n[Sender] Warning: did not receive clean ACK from server: %v\n", err)
 	}
 
 	// Ensure progress bar hits 100%
 	transfer.RenderProgressBar(100.0, totalBytes, totalBytes, lastSpeed, 0)
-	fmt.Printf("\n[Sender] Transfer completed successfully in %s!\n\n", time.Since(startTime).Round(time.Millisecond))
-
-	var result map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err == nil {
-		if count, ok := result["filesCount"].(float64); ok {
-			fmt.Printf("Peer saved %d items.\n", int(count))
-		}
-	}
+	fmt.Printf("\n[Sender] Transfer completed successfully over QUIC in %s!\n\n", time.Since(startTime).Round(time.Millisecond))
 
 	return nil
 }

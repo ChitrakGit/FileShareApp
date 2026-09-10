@@ -1,0 +1,19 @@
+{
+  "name": "FileShare",
+  "outputfilename": "FileShare",
+  "frontend:install": "",
+  "frontend:build": "",
+  "frontend:dev:watcher": "",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "Chitrak",
+    "email": "developer@example.com"
+  },
+  "info": {
+    "companyName": "FileShare",
+    "productName": "FileShare",
+    "productVersion": "1.0.0",
+    "copyright": "Copyright 2026",
+    "comments": "High-speed local file sharing"
+  }
+}

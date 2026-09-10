@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -34,7 +35,12 @@ type Server struct {
 // NewServer initializes a file share server instance.
 func NewServer(port int, downloadDir string, disc *discovery.Service, autoAccept bool, pin string) *Server {
 	if downloadDir == "" {
-		downloadDir = filepath.Clean("C:/Users/Public/Documents/FileShare")
+		if runtime.GOOS == "windows" {
+			downloadDir = filepath.Clean("C:/Users/Public/Documents/FileShare")
+		} else {
+			home, _ := os.UserHomeDir()
+			downloadDir = filepath.Join(home, "Downloads", "FileShare")
+		}
 	}
 	_ = os.MkdirAll(downloadDir, 0755)
 
@@ -74,6 +80,25 @@ func (s *Server) Start() error {
 
 	fmt.Printf("[Server] FileShare listening on http://%s:%d\n", s.Discovery.LocalPeer.IP, s.Port)
 	fmt.Printf("[Server] Destination folder: %s\n", s.DownloadDir)
+
+	// Start QUIC Listener on the same port (UDP)
+	err := transfer.StartQUICListener(s.Port, s.DownloadDir, s.ExpectedPin, func(percent float64, speed float64, eta int) {
+		msg, _ := json.Marshal(map[string]interface{}{
+			"type":      "transfer_progress",
+			"percent":   percent,
+			"speedMBps": speed,
+			"etaSec":    eta,
+		})
+		s.broadcastSSE(string(msg))
+	}, func(fileCount int, totalBytes int64) {
+		fmt.Printf("\n[QUIC] Successfully unpacked %d files (%s) into %s\n",
+			fileCount, transfer.FormatBytes(totalBytes), s.DownloadDir)
+	})
+	if err != nil {
+		fmt.Printf("[Server] Failed to start QUIC listener: %v\n", err)
+	} else {
+		fmt.Printf("[Server] QUIC Transport listening on UDP port %d\n", s.Port)
+	}
 
 	return s.httpServer.ListenAndServe()
 }

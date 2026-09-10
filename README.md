@@ -29,17 +29,36 @@
 - **💻 Dual Interface (CLI & Web UI)**:
   - **Modern Web Dashboard**: Glassmorphic dark-mode UI with drag-and-drop dropzone, live real-time progress gauges (Upload & Download MB/s, ETA, % completion), and nearby device radar.
   - **Power-User CLI**: Scriptable terminal commands with animated progress bars for servers and headless machines.
-- **📱 Instant Mobile Phone Pairing (QR Code)**:
-  - Scan the Wi-Fi QR code from your phone's camera to open FileShare on your mobile browser (iOS/Android) and send/receive files without installing any app.
+- **📱 Instant Pairing (QR Code & URL)**:
+  - **Mobile Access**: Scan the Wi-Fi QR code from your phone's camera to open FileShare on your mobile browser (iOS/Android) and send/receive files without installing any app.
+  - **Device-to-Device QR Pairing**: Click "Scan QR Code" in the Web UI to instantly scan another screen and connect two devices without typing IP addresses!
+  - **Simple URL Connect**: Easily copy your LAN URL (e.g. `http://192.168.1.100:8990`) and paste it straight into the Add Device input to instantly connect.
 - **📡 Smart Auto-Discovery & Persistent Device Manager**:
   - Automatically discovers peers on the same subnet using UDP beacons (`53535`).
   - Active subnet scanner (`fileshare scan --subnet 192.168.1`) for multi-router setups.
   - Permanent device registry (`fileshare add`) so you can send files by **device name** (e.g. `--to "Office-PC"`) without remembering IPs. Tracks MAC Addresses for reliable device identification.
-- **📦 Single Standalone Executable**:
-  - Compiled into a single binary (`fileshare.exe` on Windows or `fileshare` on Linux/macOS) with the entire Web UI baked inside via `//go:embed`. No Node.js, Python, or runtime dependencies required.
+- **📦 Single Standalone Executable (Cross-Platform)**:
+  - Compiled into a single binary (`fileshare.exe` on Windows, or native executables on macOS and Linux) with the entire Web UI baked inside via `//go:embed`. No Node.js, Python, or runtime dependencies required. Automatically resolves correct native OS download paths.
 - **🛡️ Built-in Security**:
   - Strict path traversal guards (`pathGuard`) to prevent malicious `../` overwrites.
   - Optional 6-digit session PIN authentication.
+
+---
+
+## 🆕 Version History
+
+### What's New in V4 (Desktop App Edition)
+- **Native Desktop App**: Packaged with Wails for a full native desktop experience.
+- **System Tray Integration**: Run FileShare silently in the background from your taskbar/system tray.
+- **Run at Startup**: Option to automatically start the app on system boot.
+- **Floating Drawer UI**: A sleek, glassmorphic floating drawer that appears on hover when in background mode.
+- **QUIC Protocol**: Upgraded transport layer to use QUIC for even faster, multiplexed, and encrypted transfers.
+- **Smart Device Grouping**: Automatically identifies and groups devices by type (PC, Tablet, Mobile) with appropriate icons in the UI.
+
+### What's New in V3 (Ease of Use)
+- **QR Code Pairing**: Share and scan QR codes to instantly pair devices.
+- **URL Connection**: Add devices simply by copy-pasting their FileShare LAN URL.
+- **Cross-Platform Compatibility**: Connect seamlessly between Linux, macOS, and Windows.
 
 ---
 
@@ -87,7 +106,7 @@
 cd "C:\Company Files\Study\FileShare"
 
 # Build standalone executable
-go build -o fileshare.exe ./cmd/fileshare
+go build -o fileshare.exe .
 ```
 
 ### 2. Cross-Compile for Other Platforms
@@ -95,13 +114,13 @@ You can compile binaries for other devices directly from your machine:
 
 ```powershell
 # Linux (Ubuntu, Debian, Raspberry Pi, Home Server)
-$env:GOOS="linux"; $env:GOARCH="amd64"; go build -o fileshare-linux ./cmd/fileshare
+$env:GOOS="linux"; $env:GOARCH="amd64"; go build -o fileshare-linux .
 
 # macOS (Apple Silicon M1/M2/M3)
-$env:GOOS="darwin"; $env:GOARCH="arm64"; go build -o fileshare-macos-arm64 ./cmd/fileshare
+$env:GOOS="darwin"; $env:GOARCH="arm64"; go build -o fileshare-macos-arm64 .
 
 # macOS (Intel)
-$env:GOOS="darwin"; $env:GOARCH="amd64"; go build -o fileshare-macos-intel ./cmd/fileshare
+$env:GOOS="darwin"; $env:GOARCH="amd64"; go build -o fileshare-macos-intel .
 ```
 
 ---
