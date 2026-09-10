@@ -1,1 +1,12 @@
-save tha all connected device with device ID and LAN collection info and other important things in a json file inside store directory. 
+V2.
+1. save tha all connected device with device ID and LAN collection info and other important things in a json file inside store directory. If possible save the mac address of those devices to identify quicly. 
+2. user can directly add device using lan url with port. every user can see there URL and PORT. that share to another user.
+3. user can see the upload and download speed while transfer the files or folders.
+4. All recived file by default save in C:/Users/Public/Documents/FileShare.
+5. for peer to peer connection if firewall need to be allowed. user can allowed onece and it parmanently allowed by firewall. Nextime It never should ask for permissions.
+
+
+v3.
+1. use QR code to connect devices. user can share QR code to another user and the user can scan the QR code to connect to the device.
+2. for add device user can copy  URL  from the app and paste it on the add device section.
+3. for Linux, mac and windows all device can connect.

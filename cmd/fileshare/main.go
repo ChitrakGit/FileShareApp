@@ -41,6 +41,9 @@ func main() {
 	case "receive":
 		runReceive(os.Args[2:])
 
+	case "firewall":
+		runFirewall()
+
 	case "ui":
 		fs := flag.NewFlagSet("ui", flag.ExitOnError)
 		port := fs.Int("port", 8990, "Port for Web UI and transfer server")
@@ -75,6 +78,7 @@ func printUsage() {
 	fmt.Println("  fileshare list                                     List all known and saved devices")
 	fmt.Println("  fileshare send    <file|dir...> --to <target>       Send files/folders to a peer")
 	fmt.Println("  fileshare receive [--dir <path>] [--pin <code>]     Start receiver daemon")
+	fmt.Println("  fileshare firewall                                 Permanently allow FileShare in Windows Firewall")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Println("  fileshare scan")
@@ -143,6 +147,22 @@ func runRemove(args []string) {
 		fmt.Printf("Device '%s' removed from saved list.\n", target)
 	} else {
 		fmt.Printf("No saved device found matching '%s'. Run 'fileshare list' to see saved devices.\n", target)
+	}
+}
+
+func runFirewall() {
+	if runtime.GOOS != "windows" {
+		fmt.Println("The firewall command is only supported on Windows.")
+		return
+	}
+	fmt.Println("Requesting Administrator privileges to add Windows Defender Firewall rules...")
+	cmdStr := "New-NetFirewallRule -DisplayName 'FileShare TCP' -Direction Inbound -LocalPort 8990 -Protocol TCP -Action Allow; New-NetFirewallRule -DisplayName 'FileShare UDP' -Direction Inbound -LocalPort 53535 -Protocol UDP -Action Allow"
+	cmd := exec.Command("powershell", "-Command", fmt.Sprintf("Start-Process powershell -Verb RunAs -ArgumentList \"-Command `\"%s`\"\"", cmdStr))
+	err := cmd.Run()
+	if err != nil {
+		fmt.Printf("Error adding firewall rules: %v\n", err)
+	} else {
+		fmt.Println("Firewall rules requested successfully.")
 	}
 }
 

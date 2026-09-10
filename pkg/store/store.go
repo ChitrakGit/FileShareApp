@@ -17,6 +17,7 @@ type LanInfo struct {
 	Protocol    string `json:"protocol"` // e.g. "IPv4"
 	Subnet      string `json:"subnet"`   // e.g. "192.168.1.0/24"
 	EndpointURL string `json:"endpointUrl"`
+	MACAddress  string `json:"macAddress,omitempty"`
 }
 
 // SystemInfo holds platform and OS metadata.
@@ -111,7 +112,7 @@ func (s *DeviceStore) persistLocked() error {
 }
 
 // RecordDevice inserts or updates a device record with LAN connection information.
-func (s *DeviceStore) RecordDevice(id, name, ip string, port int, osName, method string) *DeviceRecord {
+func (s *DeviceStore) RecordDevice(id, name, ip string, port int, osName, method string, macAddress string) *DeviceRecord {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -144,6 +145,9 @@ func (s *DeviceStore) RecordDevice(id, name, ip string, port int, osName, method
 		existing.LanInfo.Port = port
 		existing.LanInfo.Subnet = subnet
 		existing.LanInfo.EndpointURL = endpointURL
+		if macAddress != "" {
+			existing.LanInfo.MACAddress = macAddress
+		}
 		if osName != "" {
 			existing.SystemInfo.OS = osName
 		}
@@ -165,6 +169,7 @@ func (s *DeviceStore) RecordDevice(id, name, ip string, port int, osName, method
 			Protocol:    "IPv4",
 			Subnet:      subnet,
 			EndpointURL: endpointURL,
+			MACAddress:  macAddress,
 		},
 		SystemInfo: SystemInfo{
 			OS:       osName,

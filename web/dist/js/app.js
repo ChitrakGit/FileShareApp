@@ -39,6 +39,7 @@ const peerActionStatus = document.getElementById('peerActionStatus');
 
 const localDeviceName = document.getElementById('localDeviceName');
 const localDeviceIp = document.getElementById('localDeviceIp');
+const btnCopyUrl = document.getElementById('btnCopyUrl');
 const btnQrCode = document.getElementById('btnQrCode');
 const qrModal = document.getElementById('qrModal');
 const btnCloseQrModal = document.getElementById('btnCloseQrModal');
@@ -64,12 +65,12 @@ async function init() {
     if (res.ok) {
       localInfo = await res.json();
       localDeviceName.textContent = localInfo.deviceName;
-      localDeviceIp.textContent = `${localInfo.ip}:${localInfo.port}`;
+      localDeviceIp.textContent = `http://${localInfo.ip}:${localInfo.port}`;
     }
   } catch (err) {
     console.warn('Running in standalone or server starting:', err);
     localDeviceName.textContent = 'This Device';
-    localDeviceIp.textContent = window.location.host;
+    localDeviceIp.textContent = `http://${window.location.host}`;
   }
 
   fetchPeers();
@@ -168,7 +169,8 @@ function renderPeers() {
 
 // 3. Manual Peer Addition & Subnet Scanning
 btnAddManualPeer.addEventListener('click', async () => {
-  const ip = manualPeerIp.value.trim();
+  let ip = manualPeerIp.value.trim();
+  ip = ip.replace(/^https?:\/\//i, '');
   if (!ip) {
     showActionStatus('Please enter an IP address or hostname.', 'error');
     return;
@@ -519,7 +521,22 @@ function setupWebSocket() {
         discoveredPeers = msg.peers || [];
         renderPeers();
       } else if (msg.type === 'transfer_progress') {
-        // Handle server-side progress
+        // Handle server-side download progress
+        transferProgressCard.style.display = 'block';
+        transferDirectionBadge.textContent = 'Receiving';
+        transferItemName.textContent = 'Incoming Transfer...';
+        
+        const percent = Math.round(msg.percent);
+        progressBarFill.style.width = `${percent}%`;
+        transferPercentage.textContent = `${percent}%`;
+        transferSpeed.textContent = `${msg.speedMBps.toFixed(1)} MB/s`;
+        transferEta.textContent = `ETA: ${msg.etaSec}s`;
+        
+        if (percent >= 100) {
+           setTimeout(() => {
+             hideProgressUI();
+           }, 2000);
+        }
       }
     } catch (err) {}
   };
@@ -541,6 +558,37 @@ btnQrCode.addEventListener('click', () => {
 btnCloseQrModal.addEventListener('click', () => {
   qrModal.style.display = 'none';
 });
+
+if (btnCopyUrl) {
+  btnCopyUrl.addEventListener('click', () => {
+    const url = localDeviceIp.textContent;
+    navigator.clipboard.writeText(url).then(() => {
+      const originalTitle = btnCopyUrl.title;
+      btnCopyUrl.title = "Copied!";
+      setTimeout(() => btnCopyUrl.title = originalTitle, 2000);
+    });
+  });
+}
+
+const btnConfigureFirewall = document.getElementById('btnConfigureFirewall');
+if (btnConfigureFirewall) {
+  btnConfigureFirewall.addEventListener('click', async () => {
+    btnConfigureFirewall.disabled = true;
+    showActionStatus('Requesting Administrator permissions...', 'info');
+    try {
+      const res = await fetch('/api/firewall', { method: 'POST' });
+      if (res.ok) {
+        showActionStatus('Firewall configured successfully!', 'success');
+      } else {
+        showActionStatus('Failed to configure firewall.', 'error');
+      }
+    } catch (err) {
+      showActionStatus(`Firewall error: ${err.message}`, 'error');
+    } finally {
+      btnConfigureFirewall.disabled = false;
+    }
+  });
+}
 
 // 8. History Storage
 function loadHistory() {

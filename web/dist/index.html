@@ -37,6 +37,12 @@
           <span class="status-dot pulsing"></span>
           <span class="device-name" id="localDeviceName">Detecting...</span>
           <span class="device-ip" id="localDeviceIp">...</span>
+          <button class="btn-icon-sm" id="btnCopyUrl" title="Copy LAN URL" style="margin-left: 8px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
         </div>
         <button class="btn-icon" id="btnQrCode" title="Pair Mobile Phone via QR Code">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -181,6 +187,14 @@
             <div class="subnet-scan-group">
               <input type="text" id="scanSubnetInput" placeholder="Subnet (e.g. 192.168.1)" class="form-control form-control-sm">
               <button class="btn btn-sm btn-secondary" id="btnScanSubnet">Scan Subnet</button>
+            </div>
+            <div style="margin-top: 10px; display: flex; justify-content: center;">
+              <button class="btn btn-sm btn-secondary" id="btnConfigureFirewall" style="width: 100%;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                Configure Firewall (Windows)
+              </button>
             </div>
             <p class="small-hint" id="peerActionStatus" style="display: none; margin-top: 6px;"></p>
           </div>

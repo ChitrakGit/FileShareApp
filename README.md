@@ -27,14 +27,14 @@
 - **⚡ Full Wire & Wi-Fi Speed**: Transfers files directly between devices on your local network at maximum bandwidth (up to 1 Gbps+ on Ethernet/Wi-Fi 6) without routing through any external cloud server.
 - **📁 Multi-File & Entire Directory Streaming**: Send single files, batches of selected files, or complete nested folder hierarchies in one go. Data streams on the fly with **zero temporary files created on disk**.
 - **💻 Dual Interface (CLI & Web UI)**:
-  - **Modern Web Dashboard**: Glassmorphic dark-mode UI with drag-and-drop dropzone, live progress gauges (MB/s, ETA, % completion), and nearby device radar.
+  - **Modern Web Dashboard**: Glassmorphic dark-mode UI with drag-and-drop dropzone, live real-time progress gauges (Upload & Download MB/s, ETA, % completion), and nearby device radar.
   - **Power-User CLI**: Scriptable terminal commands with animated progress bars for servers and headless machines.
 - **📱 Instant Mobile Phone Pairing (QR Code)**:
   - Scan the Wi-Fi QR code from your phone's camera to open FileShare on your mobile browser (iOS/Android) and send/receive files without installing any app.
 - **📡 Smart Auto-Discovery & Persistent Device Manager**:
   - Automatically discovers peers on the same subnet using UDP beacons (`53535`).
   - Active subnet scanner (`fileshare scan --subnet 192.168.1`) for multi-router setups.
-  - Permanent device registry (`fileshare add`) so you can send files by **device name** (e.g. `--to "Office-PC"`) without remembering IPs.
+  - Permanent device registry (`fileshare add`) so you can send files by **device name** (e.g. `--to "Office-PC"`) without remembering IPs. Tracks MAC Addresses for reliable device identification.
 - **📦 Single Standalone Executable**:
   - Compiled into a single binary (`fileshare.exe` on Windows or `fileshare` on Linux/macOS) with the entire Web UI baked inside via `//go:embed`. No Node.js, Python, or runtime dependencies required.
 - **🛡️ Built-in Security**:
@@ -115,11 +115,11 @@ Simply run:
 .\fileshare.exe ui
 ```
 1. FileShare starts the local server and **automatically opens your browser** at `http://localhost:8990`.
-2. Other computers on the same network can access it at `http://<your-ip>:8990`.
+2. Other computers on the same network can access it at `http://<your-ip>:8990`. You can easily copy your full LAN URL directly from the top navigation bar.
 3. **To connect a smartphone**: Click the **Mobile Pair** button in the top right and scan the QR code with your phone's camera.
 4. **Drag & Drop**: Drop individual files or entire folders into the dropzone, choose a target device, and click **Send**.
 
-Custom port and custom download directory:
+Custom port and custom download directory (Default is `C:\Users\Public\Documents\FileShare`):
 ```powershell
 .\fileshare.exe ui --port 9000 --dir "C:\MyDownloads"
 ```
@@ -216,6 +216,7 @@ In Router B's settings, switch operation mode from **Router Mode** to **Access P
 | `fileshare remove <name\|IP>` | Remove a device from saved registry | `fileshare remove Laptop-A` |
 | `fileshare send <paths...> --to <dest>` | Send files/folders to IP or device name | `fileshare send ./photos/ --to Laptop-A` |
 | `fileshare receive` | Run headless receiver daemon | `fileshare receive --dir ~/Downloads` |
+| `fileshare firewall` | Permanently allow FileShare in Windows Firewall | `fileshare firewall` |
 
 ---
 
@@ -245,7 +246,9 @@ In Router B's settings, switch operation mode from **Router Mode** to **Access P
 
 ### 2. Windows Defender Firewall blocks connections
 - **Cause**: Windows may prompt to allow network access when running for the first time.
-- **Solution**: Click **"Allow access"** on private networks. Alternatively, add a firewall rule via Administrator PowerShell:
+- **Solution**: 
+  - **Easiest**: Click the **"Configure Firewall (Windows)"** button in the Web UI or run `fileshare firewall` in the CLI to automatically add persistent rules (requires Administrator privileges).
+  - **Manual**: Click **"Allow access"** on private networks when prompted. Alternatively, add a firewall rule via Administrator PowerShell:
   ```powershell
   New-NetFirewallRule -DisplayName "FileShare Port 8990" -Direction Inbound -LocalPort 8990 -Protocol TCP -Action Allow
   New-NetFirewallRule -DisplayName "FileShare Discovery 53535" -Direction Inbound -LocalPort 53535 -Protocol UDP -Action Allow

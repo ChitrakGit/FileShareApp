@@ -11,7 +11,7 @@ func TestDeviceStore(t *testing.T) {
 	ds := NewDeviceStore(tempDir)
 
 	// 1. Record device
-	rec := ds.RecordDevice("dev-laptop-1", "MacBook-Pro", "192.168.1.100", 8990, "darwin", "UDP_BROADCAST")
+	rec := ds.RecordDevice("dev-laptop-1", "MacBook-Pro", "192.168.1.100", 8990, "darwin", "UDP_BROADCAST", "")
 	if rec == nil {
 		t.Fatal("expected non-nil record")
 	}

@@ -98,7 +98,7 @@ func (r *PeerRegistry) AddOrUpdate(p Peer) {
 	r.mu.Unlock()
 
 	// Persist to store/devices.json
-	store.Default().RecordDevice(p.ID, p.Name, p.IP, p.Port, p.OS, "UDP_BROADCAST")
+	store.Default().RecordDevice(p.ID, p.Name, p.IP, p.Port, p.OS, "UDP_BROADCAST", "")
 }
 
 // AddSavedPeer saves a peer permanently to disk.
@@ -117,7 +117,7 @@ func (r *PeerRegistry) AddSavedPeer(p Peer) error {
 	r.mu.Unlock()
 
 	// Persist to store/devices.json
-	store.Default().RecordDevice(p.ID, p.Name, p.IP, p.Port, p.OS, "MANUAL_ADDED")
+	store.Default().RecordDevice(p.ID, p.Name, p.IP, p.Port, p.OS, "MANUAL_ADDED", "")
 	return err
 }
 
@@ -228,6 +228,7 @@ func ProbePeer(addr string, defaultPort int, timeout time.Duration) (*Peer, erro
 		IP         string `json:"ip"`
 		Port       int    `json:"port"`
 		OS         string `json:"os"`
+		MACAddress string `json:"macAddress"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
@@ -245,7 +246,7 @@ func ProbePeer(addr string, defaultPort int, timeout time.Duration) (*Peer, erro
 	}
 
 	// Persist to store/devices.json
-	store.Default().RecordDevice(p.ID, p.Name, p.IP, p.Port, p.OS, "ACTIVE_PROBE")
+	store.Default().RecordDevice(p.ID, p.Name, p.IP, p.Port, p.OS, "ACTIVE_PROBE", info.MACAddress)
 
 	return p, nil
 }

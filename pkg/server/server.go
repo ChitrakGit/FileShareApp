@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -31,8 +34,7 @@ type Server struct {
 // NewServer initializes a file share server instance.
 func NewServer(port int, downloadDir string, disc *discovery.Service, autoAccept bool, pin string) *Server {
 	if downloadDir == "" {
-		home, _ := os.UserHomeDir()
-		downloadDir = filepath.Join(home, "Downloads", "FileShare")
+		downloadDir = filepath.Clean("C:/Users/Public/Documents/FileShare")
 	}
 	_ = os.MkdirAll(downloadDir, 0755)
 
@@ -62,6 +64,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/peers/scan", s.handleSubnetScan)
 	mux.HandleFunc("/api/upload", s.handleMultipartUpload)
 	mux.HandleFunc("/api/stream-upload", s.handleStreamUpload)
+	mux.HandleFunc("/api/firewall", s.handleFirewallConfig)
 	mux.HandleFunc("/events", s.handleSSE)
 
 	s.httpServer = &http.Server{
@@ -90,8 +93,24 @@ func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
 		"ip":          s.Discovery.LocalPeer.IP,
 		"port":        s.Port,
 		"os":          s.Discovery.LocalPeer.OS,
+		"macAddress":  getPrimaryMACAddress(),
 		"downloadDir": s.DownloadDir,
 	})
+}
+
+func getPrimaryMACAddress() string {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return ""
+	}
+	for _, i := range interfaces {
+		if i.Flags&net.FlagUp != 0 && i.Flags&net.FlagLoopback == 0 {
+			if len(i.HardwareAddr) > 0 {
+				return i.HardwareAddr.String()
+			}
+		}
+	}
+	return ""
 }
 
 func (s *Server) handlePeers(w http.ResponseWriter, r *http.Request) {
@@ -206,6 +225,18 @@ func (s *Server) handleMultipartUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 32 MB in-memory boundary for multipart headers
+	totalLen, _ := strconv.ParseInt(r.Header.Get("Content-Length"), 10, 64)
+	progressReader := transfer.NewProgressReader(r.Body, totalLen, func(percent float64, speedMBps float64, etaSec int) {
+		msg, _ := json.Marshal(map[string]interface{}{
+			"type":      "transfer_progress",
+			"percent":   percent,
+			"speedMBps": speedMBps,
+			"etaSec":    etaSec,
+		})
+		s.broadcastSSE(string(msg))
+	})
+	r.Body = io.NopCloser(progressReader)
+
 	reader, err := r.MultipartReader()
 	if err != nil {
 		http.Error(w, "Failed to read multipart data: "+err.Error(), http.StatusBadRequest)
@@ -303,7 +334,18 @@ func (s *Server) handleStreamUpload(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("\n[Receiver] Incoming stream transfer from %s...\n", senderName)
 
-	fileCount, totalBytes, err := transfer.ExtractTar(r.Body, s.DownloadDir, nil)
+	totalLen, _ := strconv.ParseInt(r.Header.Get("Content-Length"), 10, 64)
+	progressReader := transfer.NewProgressReader(r.Body, totalLen, func(percent float64, speedMBps float64, etaSec int) {
+		msg, _ := json.Marshal(map[string]interface{}{
+			"type":      "transfer_progress",
+			"percent":   percent,
+			"speedMBps": speedMBps,
+			"etaSec":    etaSec,
+		})
+		s.broadcastSSE(string(msg))
+	})
+
+	fileCount, totalBytes, err := transfer.ExtractTar(progressReader, s.DownloadDir, nil)
 	if err != nil {
 		fmt.Printf("[Receiver] Transfer error: %v\n", err)
 		http.Error(w, "Extraction failed: "+err.Error(), http.StatusInternalServerError)
@@ -355,4 +397,33 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 			flusher.Flush()
 		}
 	}
+}
+
+func (s *Server) broadcastSSE(msg string) {
+	s.clientsMu.Lock()
+	defer s.clientsMu.Unlock()
+	for ch := range s.sseClients {
+		select {
+		case ch <- msg:
+		default:
+		}
+	}
+}
+
+func (s *Server) handleFirewallConfig(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	
+	cmdStr := "New-NetFirewallRule -DisplayName 'FileShare TCP' -Direction Inbound -LocalPort 8990 -Protocol TCP -Action Allow; New-NetFirewallRule -DisplayName 'FileShare UDP' -Direction Inbound -LocalPort 53535 -Protocol UDP -Action Allow"
+	cmd := exec.Command("powershell", "-Command", fmt.Sprintf("Start-Process powershell -Verb RunAs -ArgumentList \"-Command `\"%s`\"\"", cmdStr))
+	err := cmd.Run()
+	if err != nil {
+		http.Error(w, "Failed to run firewall command: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"status": "success"})
 }
