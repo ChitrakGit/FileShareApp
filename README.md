@@ -47,6 +47,10 @@
 
 ## 🆕 Version History
 
+### What's New in V6
+- **Full Directory Transfer Tested**: End-to-end tests now explicitly guarantee that large, deeply nested directories transfer swiftly and flawlessly between devices without any lag.
+- **Robust Version Testing**: Comprehensive testing for all application versions.
+
 ### What's New in V5
 - **Cross-Platform Autostart**: The desktop application now natively supports "run at startup" on Windows, macOS, and Linux.
 - **Quick Device Pairing**: You can instantly add a device on your local network using the new "Add Device" button right next to the target selector.

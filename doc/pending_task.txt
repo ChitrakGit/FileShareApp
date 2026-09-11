@@ -29,3 +29,4 @@ v4.
  V5. 
  1. while selecting device for upload or download show an add device icon also, by clicking on it user can add device on the fly. but to add that device it must be on same LAN Network.
  2. make it for linux and mac os also.  
+ ** done **
