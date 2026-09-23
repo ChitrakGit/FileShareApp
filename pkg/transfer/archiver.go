@@ -2,6 +2,8 @@ package transfer
 
 import (
 	"archive/tar"
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -78,6 +80,8 @@ func StreamTar(items []ItemInfo, w io.Writer, onProgress func(bytesWritten int64
 	tw := tar.NewWriter(w)
 	defer tw.Close()
 
+	checksums := make(map[string]string)
+
 	for _, item := range items {
 		info, err := os.Lstat(item.SourcePath)
 		if err != nil {
@@ -102,12 +106,14 @@ func StreamTar(items []ItemInfo, w io.Writer, onProgress func(bytesWritten int64
 				return fmt.Errorf("open file error %s: %w", item.SourcePath, err)
 			}
 
-			// Copy with progress
+			// Copy with progress and hash
+			hasher := sha256.New()
+			multiWriter := io.MultiWriter(tw, hasher)
 			buf := make([]byte, 64*1024)
 			for {
 				n, readErr := file.Read(buf)
 				if n > 0 {
-					if _, writeErr := tw.Write(buf[:n]); writeErr != nil {
+					if _, writeErr := multiWriter.Write(buf[:n]); writeErr != nil {
 						file.Close()
 						return writeErr
 					}
@@ -124,6 +130,20 @@ func StreamTar(items []ItemInfo, w io.Writer, onProgress func(bytesWritten int64
 				}
 			}
 			file.Close()
+			checksums[item.RelativePath] = fmt.Sprintf("%x", hasher.Sum(nil))
+		}
+	}
+
+	// Write checksums as the last file in the tar
+	checksumData, err := json.Marshal(checksums)
+	if err == nil {
+		checksumHeader := &tar.Header{
+			Name: ".fileshare_checksums.json",
+			Mode: 0644,
+			Size: int64(len(checksumData)),
+		}
+		if err := tw.WriteHeader(checksumHeader); err == nil {
+			tw.Write(checksumData)
 		}
 	}
 

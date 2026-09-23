@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>FileShare - Android</title>
+  <link rel="stylesheet" href="css/android.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header -->
+  <header class="top-nav">
+    <div class="brand-text">
+      <span class="app-name">FileShare<span class="badge-tag">MOBILE</span></span>
+    </div>
+  </header>
+
+  <!-- Views -->
+  <main class="main-layout">
+    
+    <!-- VIEW: SEND -->
+    <section id="view-send" class="view-section active">
+      <div class="card">
+        <h3>Connected Devices</h3>
+        <button class="btn btn-secondary" onclick="showQrModal()">Show My QR Code</button>
+        <div id="peersList" class="peers-list mt-2">
+          <!-- Populated by JS -->
+          <p>Scanning...</p>
+        </div>
+      </div>
+      
+      <div class="card mt-2 dropzone-card" id="dropzone">
+        <h3>Select Files to Send</h3>
+        <label class="btn btn-primary" for="fileInput">Select Files</label>
+        <input type="file" id="fileInput" multiple style="display: none;">
+      </div>
+
+      <div class="card progress-card mt-2" id="transferProgressCard" style="display: none;">
+        <h4 id="transferItemName">Sending...</h4>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" id="progressBarFill" style="width: 0%;"></div>
+        </div>
+        <div class="progress-stats">
+          <span id="transferSpeed">0 MB/s</span>
+          <span id="transferPercentage">0%</span>
+        </div>
+        <p class="small-hint text-success" id="checksumStatus" style="display:none;">Checksum Verifying...</p>
+      </div>
+    </section>
+
+    <!-- VIEW: RECEIVED -->
+    <section id="view-received" class="view-section" style="display: none;">
+      <div class="card">
+        <h3>Received Files</h3>
+        <button class="btn btn-sm btn-secondary mb-2" onclick="fetchHistory()">Refresh</button>
+        <div class="history-list" id="historyList">
+          <p>No files received yet.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW: SETTINGS -->
+    <section id="view-settings" class="view-section" style="display: none;">
+      <div class="card">
+        <h3>Settings</h3>
+        
+        <details class="settings-section">
+          <summary>Storage Section</summary>
+          <div class="form-group row">
+            <input type="text" id="setSaveDir" class="form-control" placeholder="/sdcard/Download/FileShare">
+            <button class="btn btn-sm btn-secondary" onclick="refreshSetting('SaveDirectory')">Refresh</button>
+          </div>
+        </details>
+
+        <details class="settings-section">
+          <summary>Server Section</summary>
+          <div class="form-group row">
+            <input type="text" id="setMulticastAddr" class="form-control" placeholder="224.0.0.1">
+            <button class="btn btn-sm btn-secondary" onclick="refreshSetting('MulticastAddr')">Refresh</button>
+          </div>
+          <div class="form-group row">
+            <input type="number" id="setMulticastPort" class="form-control" placeholder="53535">
+            <button class="btn btn-sm btn-secondary" onclick="refreshSetting('MulticastPort')">Refresh</button>
+          </div>
+          <button class="btn btn-danger btn-block mt-2" onclick="restartServer()">Restart Server</button>
+        </details>
+
+        <details class="settings-section">
+          <summary>User Section</summary>
+          <div class="form-group row">
+            <input type="text" id="setDeviceName" class="form-control" placeholder="Device Name">
+            <!-- No refresh button for name -->
+          </div>
+          <div class="device-info mt-2">
+            <p><strong>Device Info:</strong></p>
+            <p id="infoModel">Model: Loading...</p>
+            <p id="infoOs">OS Name: Android</p>
+            <p id="infoType">Type: SMART Phone</p>
+          </div>
+        </details>
+
+        <details class="settings-section">
+          <summary>Network Section</summary>
+          <div class="form-group">
+            <label>Blocked Ports (In/Out comma separated)</label>
+            <input type="text" id="setBlockedPorts" class="form-control" placeholder="8080, 22">
+          </div>
+        </details>
+
+        <details class="settings-section">
+          <summary>Devices Section</summary>
+          <div id="savedDevicesList">
+            <p class="small-hint">No saved devices</p>
+          </div>
+        </details>
+
+        <div class="settings-actions mt-3">
+          <button class="btn btn-secondary btn-block" onclick="setDefaultSettings()">Set Default Settings</button>
+          <button class="btn btn-primary btn-block mt-2" onclick="saveSettings()">Save & Apply</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" onclick="switchView('send', this)">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+      <span>Send</span>
+    </button>
+    <button class="nav-btn" onclick="switchView('received', this)">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      <span>Received</span>
+    </button>
+    <button class="nav-btn" onclick="switchView('settings', this)">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>Settings</span>
+    </button>
+  </nav>
+
+  <script src="js/android.js"></script>
+</body>
+</html>

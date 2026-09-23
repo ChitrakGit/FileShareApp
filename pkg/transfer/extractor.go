@@ -2,6 +2,8 @@ package transfer
 
 import (
 	"archive/tar"
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -24,6 +26,9 @@ func ExtractTar(r io.Reader, destDir string, onProgress func(bytesWritten int64)
 	fileCount := 0
 	var totalBytes int64
 
+	computedChecksums := make(map[string]string)
+	expectedChecksums := make(map[string]string)
+
 	for {
 		header, err := tr.Next()
 		if err == io.EOF {
@@ -31,6 +36,15 @@ func ExtractTar(r io.Reader, destDir string, onProgress func(bytesWritten int64)
 		}
 		if err != nil {
 			return fileCount, totalBytes, fmt.Errorf("tar read error: %w", err)
+		}
+
+		if header.Name == ".fileshare_checksums.json" {
+			data, err := io.ReadAll(tr)
+			if err != nil {
+				return fileCount, totalBytes, fmt.Errorf("failed to read checksum manifest: %w", err)
+			}
+			json.Unmarshal(data, &expectedChecksums)
+			continue
 		}
 
 		// Security: Prevent path traversal attacks
@@ -63,11 +77,14 @@ func ExtractTar(r io.Reader, destDir string, onProgress func(bytesWritten int64)
 				return fileCount, totalBytes, fmt.Errorf("failed to create file %s: %w", targetPath, err)
 			}
 
+			hasher := sha256.New()
+			multiWriter := io.MultiWriter(outFile, hasher)
+
 			buf := make([]byte, 64*1024)
 			for {
 				n, readErr := tr.Read(buf)
 				if n > 0 {
-					if _, writeErr := outFile.Write(buf[:n]); writeErr != nil {
+					if _, writeErr := multiWriter.Write(buf[:n]); writeErr != nil {
 						outFile.Close()
 						return fileCount, totalBytes, writeErr
 					}
@@ -85,8 +102,20 @@ func ExtractTar(r io.Reader, destDir string, onProgress func(bytesWritten int64)
 				}
 			}
 			outFile.Close()
+			computedChecksums[cleanedRelPath] = fmt.Sprintf("%x", hasher.Sum(nil))
 			fileCount++
 		}
+	}
+
+	if len(expectedChecksums) > 0 {
+		for file, expectedHash := range expectedChecksums {
+			if computedHash, exists := computedChecksums[file]; exists {
+				if computedHash != expectedHash {
+					return fileCount, totalBytes, fmt.Errorf("checksum mismatch for file %s", file)
+				}
+			}
+		}
+		fmt.Printf("[Receiver] Checksum verification passed for %d files.\n", len(expectedChecksums))
 	}
 
 	return fileCount, totalBytes, nil

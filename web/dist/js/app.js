@@ -882,3 +882,107 @@ function escapeHtml(str) {
 
 // Start
 window.addEventListener('DOMContentLoaded', init);
+
+// PC Settings Logic
+async function fetchSettingsPC() {
+  try {
+    const res = await fetch('/api/settings');
+    const s = await res.json();
+    document.getElementById('pcSetSaveDir').value = s.saveDirectory || '';
+    document.getElementById('pcSetMulticastAddr').value = s.multicastAddr || '';
+    document.getElementById('pcSetMulticastPort').value = s.multicastPort || '';
+    document.getElementById('pcSetDeviceName').value = s.deviceName || '';
+    document.getElementById('pcSetBlockedPorts').value = s.blockedPortsIn ? s.blockedPortsIn.join(', ') : '';
+
+    // Set OS and Model Info
+    document.getElementById('pcInfoOs').innerText = `OS Name: ${navigator.platform}`;
+  } catch (e) {
+    console.error("Error fetching settings", e);
+  }
+}
+
+async function saveSettingsPC() {
+  const saveDir = document.getElementById('pcSetSaveDir').value;
+  const mAddr = document.getElementById('pcSetMulticastAddr').value;
+  const mPort = parseInt(document.getElementById('pcSetMulticastPort').value);
+  const dName = document.getElementById('pcSetDeviceName').value;
+  const bPortsStr = document.getElementById('pcSetBlockedPorts').value;
+  const bPorts = bPortsStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+
+  const settings = {
+    saveDirectory: saveDir,
+    multicastAddr: mAddr,
+    multicastPort: mPort,
+    deviceName: dName,
+    blockedPortsIn: bPorts,
+    blockedPortsOut: [],
+    blockedDevices: []
+  };
+
+  try {
+    await fetch('/api/settings', {
+      method: 'POST',
+      body: JSON.stringify(settings)
+    });
+    alert('Settings saved!');
+  } catch(e) {
+    alert('Failed to save settings');
+  }
+}
+
+function setDefaultSettingsPC() {
+  document.getElementById('pcSetSaveDir').value = 'C:\\Downloads\\FileShare';
+  document.getElementById('pcSetMulticastAddr').value = '224.0.0.1';
+  document.getElementById('pcSetMulticastPort').value = '53535';
+  document.getElementById('pcSetDeviceName').value = 'Desktop PC';
+  document.getElementById('pcSetBlockedPorts').value = '';
+}
+
+
+// --- PC App View Switching ---
+function switchViewPC(viewId, btnElement) {
+    // Hide all views
+    document.querySelectorAll('.app-view').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.app-view').forEach(el => el.classList.remove('active'));
+
+    // Remove active class from all tabs
+    document.querySelectorAll('.pc-tab-btn').forEach(el => el.classList.remove('active'));
+
+    // Show target view
+    const targetView = document.getElementById('view-' + viewId);
+    if (targetView) {
+        targetView.style.display = 'block';
+        targetView.classList.add('active');
+    }
+
+    // Set active tab
+    if (btnElement) {
+        btnElement.classList.add('active');
+    }
+
+    // Special handlers based on view
+    if (viewId === 'settings') {
+        fetchSettingsPC();
+    }
+}
+
+// --- Wails Drawer Expand ---
+function expandDrawerApp() {
+    console.log("Expanding Drawer App");
+    
+    // Hide the drawer
+    const drawer = document.getElementById('drawerContainer');
+    if (drawer) {
+        drawer.style.display = 'none';
+    }
+
+    // Try to resize the Wails window if running in Desktop mode
+    if (window.runtime && window.runtime.WindowSetSize) {
+        try {
+            window.runtime.WindowSetSize(1024, 768);
+            window.runtime.WindowCenter();
+        } catch (e) {
+            console.error("Failed to resize window", e);
+        }
+    }
+}

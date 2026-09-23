@@ -14,3 +14,13 @@ downloads/
 .idea/
 Thumbs.db
 .DS_Store
+
+# Android & Gradle
+.gradle/
+**/build/
+local.properties
+.cxx/
+*.apk
+*.aab
+*.dex
+

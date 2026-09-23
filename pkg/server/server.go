@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"fileshare/pkg/discovery"
+	"fileshare/pkg/store"
 	"fileshare/pkg/transfer"
 	"fileshare/web"
 )
@@ -71,6 +72,8 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/upload", s.handleMultipartUpload)
 	mux.HandleFunc("/api/stream-upload", s.handleStreamUpload)
 	mux.HandleFunc("/api/firewall", s.handleFirewallConfig)
+	mux.HandleFunc("/api/settings", s.handleSettings)
+	mux.HandleFunc("/api/history", s.handleHistory)
 	mux.HandleFunc("/events", s.handleSSE)
 
 	s.httpServer = &http.Server{
@@ -451,4 +454,66 @@ func (s *Server) handleFirewallConfig(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{"status": "success"})
+}
+
+func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		settings := store.DefaultSettings().Get()
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(settings)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		var req store.AppSettings
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		err := store.DefaultSettings().Update(req)
+		if err != nil {
+			http.Error(w, "Failed to save settings: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+		return
+	}
+
+	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+}
+
+func (s *Server) handleHistory(w http.ResponseWriter, r *http.Request) {
+	// Simple implementation to list files in the DownloadDir
+	entries, err := os.ReadDir(s.DownloadDir)
+	if err != nil {
+		http.Error(w, "Failed to read directory: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	type FileItem struct {
+		Name  string `json:"name"`
+		IsDir bool   `json:"isDir"`
+		Size  int64  `json:"size"`
+		Time  string `json:"time"`
+	}
+
+	var history []FileItem
+	for _, entry := range entries {
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		history = append(history, FileItem{
+			Name:  entry.Name(),
+			IsDir: entry.IsDir(),
+			Size:  info.Size(),
+			Time:  info.ModTime().Format(time.RFC3339),
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(history)
 }
