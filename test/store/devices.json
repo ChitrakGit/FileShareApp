@@ -1,5 +1,27 @@
 [
   {
+    "deviceId": "devbox-8996",
+    "deviceName": "devbox",
+    "lanInfo": {
+      "ip": "192.168.0.2",
+      "port": 8996,
+      "protocol": "IPv4",
+      "subnet": "192.168.0.0/24",
+      "endpointUrl": "http://192.168.0.2:8996"
+    },
+    "systemInfo": {
+      "os": "linux",
+      "hostname": "devbox"
+    },
+    "connection": {
+      "discoveryMethod": "UDP_BROADCAST",
+      "status": "ONLINE",
+      "firstSeen": "2026-09-23T16:30:06.741694596Z",
+      "lastSeen": "2026-09-23T16:30:06.741694596Z"
+    },
+    "totalTransfers": 0
+  },
+  {
     "deviceId": "192.168.1.99:8997",
     "deviceName": "My Linux Device",
     "lanInfo": {
@@ -17,7 +39,7 @@
       "discoveryMethod": "MANUAL_ADDED",
       "status": "ONLINE",
       "firstSeen": "2026-09-11T02:26:46.2018696+05:30",
-      "lastSeen": "2026-09-11T13:25:56.9760971+05:30"
+      "lastSeen": "2026-09-23T16:30:06.739781976Z"
     },
     "totalTransfers": 0
   }
