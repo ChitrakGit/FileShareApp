@@ -76,7 +76,7 @@ func InspectPaths(paths []string) ([]ItemInfo, int64, error) {
 }
 
 // StreamTar streams a list of ItemInfo entries into a writer using archive/tar on the fly.
-func StreamTar(items []ItemInfo, w io.Writer, onProgress func(bytesWritten int64)) error {
+func StreamTar(items []ItemInfo, w io.Writer, onProgress func(bytesWritten int64), onFileDone func()) error {
 	tw := tar.NewWriter(w)
 	defer tw.Close()
 
@@ -131,6 +131,13 @@ func StreamTar(items []ItemInfo, w io.Writer, onProgress func(bytesWritten int64
 			}
 			file.Close()
 			checksums[item.RelativePath] = fmt.Sprintf("%x", hasher.Sum(nil))
+			if onFileDone != nil {
+				onFileDone()
+			}
+		} else {
+			if onFileDone != nil {
+				onFileDone()
+			}
 		}
 	}
 

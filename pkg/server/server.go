@@ -4,12 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,129 +19,97 @@ import (
 	"fileshare/web"
 )
 
-// Server handles HTTP API, Web UI, and incoming file transfers.
+// Server handles the HTTP API and Web UI serving
 type Server struct {
-	Port         int
-	DownloadDir  string
-	AutoAccept   bool
-	ExpectedPin  string
-	Discovery    *discovery.Service
-	httpServer   *http.Server
-	clientsMu    sync.Mutex
-	sseClients   map[chan string]bool
+	Port        int
+	DownloadDir string
+	Discovery   *discovery.Service
+	AutoAccept  bool
+	ExpectedPin string
+
+	clientsMu  sync.Mutex
+	sseClients map[chan string]bool
 }
 
-// NewServer initializes a file share server instance.
+// NewServer initializes a new FileShare server instance
 func NewServer(port int, downloadDir string, disc *discovery.Service, autoAccept bool, pin string) *Server {
 	if downloadDir == "" {
-		if runtime.GOOS == "windows" {
-			downloadDir = filepath.Clean("C:/Users/Public/Documents/FileShare")
-		} else {
-			home, _ := os.UserHomeDir()
-			downloadDir = filepath.Join(home, "Downloads", "FileShare")
-		}
+		downloadDir = store.DefaultSettings().Get().DownloadDir
 	}
-	_ = os.MkdirAll(downloadDir, 0755)
 
 	return &Server{
 		Port:        port,
 		DownloadDir: downloadDir,
+		Discovery:   disc,
 		AutoAccept:  autoAccept,
 		ExpectedPin: pin,
-		Discovery:   disc,
 		sseClients:  make(map[chan string]bool),
 	}
 }
 
-// Start runs the HTTP server on the configured port.
+// Start boots up the HTTP server and blocks
 func (s *Server) Start() error {
 	mux := http.NewServeMux()
 
-	// 1. Web UI Static Files
-	fileServer := http.FileServer(web.GetFileSystem())
-	mux.Handle("/", fileServer)
-
-	// 2. API Endpoints
+	// API Routes
 	mux.HandleFunc("/api/info", s.handleInfo)
-	mux.HandleFunc("/api/peers", s.handlePeers)
+	mux.HandleFunc("/api/peers", s.handlePeersList)
 	mux.HandleFunc("/api/peers/add", s.handlePeersAdd)
 	mux.HandleFunc("/api/peers/remove", s.handlePeersRemove)
-	mux.HandleFunc("/api/peers/scan", s.handleSubnetScan)
+	mux.HandleFunc("/api/peers/scan-subnet", s.handleSubnetScan)
 	mux.HandleFunc("/api/upload", s.handleMultipartUpload)
 	mux.HandleFunc("/api/stream-upload", s.handleStreamUpload)
+	mux.HandleFunc("/api/sse", s.handleSSE)
 	mux.HandleFunc("/api/firewall", s.handleFirewallConfig)
 	mux.HandleFunc("/api/settings", s.handleSettings)
 	mux.HandleFunc("/api/history", s.handleHistory)
-	mux.HandleFunc("/events", s.handleSSE)
 
-	s.httpServer = &http.Server{
-		Addr:    fmt.Sprintf(":%d", s.Port),
-		Handler: mux,
-	}
+	// Embedded Web UI
+	mux.Handle("/", http.FileServer(http.FS(web.GetFrontendAssets())))
 
-	fmt.Printf("[Server] FileShare listening on http://%s:%d\n", s.Discovery.LocalPeer.IP, s.Port)
-	fmt.Printf("[Server] Destination folder: %s\n", s.DownloadDir)
+	// Start background routine to push peer updates to Web UI
+	go s.peerNotificationLoop()
 
-	// Start QUIC Listener on the same port (UDP)
-	err := transfer.StartQUICListener(s.Port, s.DownloadDir, s.ExpectedPin, func(percent float64, speed float64, eta int) {
-		msg, _ := json.Marshal(map[string]interface{}{
-			"type":      "transfer_progress",
-			"percent":   percent,
-			"speedMBps": speed,
-			"etaSec":    eta,
-		})
-		s.broadcastSSE(string(msg))
-	}, func(fileCount int, totalBytes int64) {
-		fmt.Printf("\n[QUIC] Successfully unpacked %d files (%s) into %s\n",
-			fileCount, transfer.FormatBytes(totalBytes), s.DownloadDir)
-	})
-	if err != nil {
-		fmt.Printf("[Server] Failed to start QUIC listener: %v\n", err)
-	} else {
-		fmt.Printf("[Server] QUIC Transport listening on UDP port %d\n", s.Port)
-	}
-
-	return s.httpServer.ListenAndServe()
+	addr := fmt.Sprintf("0.0.0.0:%d", s.Port)
+	return http.ListenAndServe(addr, mux)
 }
 
-// Stop gracefully stops the server.
-func (s *Server) Stop() error {
-	if s.httpServer != nil {
-		return s.httpServer.Close()
+func (s *Server) Stop() {
+	// Dummy method for tests that call Stop()
+}
+
+func (s *Server) peerNotificationLoop() {
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		peers := s.Discovery.Registry.GetAllPeers(10 * time.Second)
+		msg, _ := json.Marshal(map[string]interface{}{
+			"type":  "peer_update",
+			"peers": peers,
+		})
+		s.broadcastSSE(string(msg))
 	}
-	return nil
 }
 
 func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"deviceName":  s.Discovery.LocalPeer.Name,
-		"ip":          s.Discovery.LocalPeer.IP,
-		"port":        s.Port,
-		"os":          s.Discovery.LocalPeer.OS,
-		"macAddress":  getPrimaryMACAddress(),
-		"downloadDir": s.DownloadDir,
-	})
+	_ = json.NewEncoder(w).Encode(s.Discovery.LocalPeer)
 }
 
-func getPrimaryMACAddress() string {
-	interfaces, err := net.Interfaces()
-	if err != nil {
-		return ""
+func (s *Server) handlePeersList(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
-	for _, i := range interfaces {
-		if i.Flags&net.FlagUp != 0 && i.Flags&net.FlagLoopback == 0 {
-			if len(i.HardwareAddr) > 0 {
-				return i.HardwareAddr.String()
-			}
-		}
-	}
-	return ""
-}
 
-func (s *Server) handlePeers(w http.ResponseWriter, r *http.Request) {
+	peers := s.Discovery.Registry.GetAllPeers(10 * time.Second)
 	w.Header().Set("Content-Type", "application/json")
-	peers := s.Discovery.Registry.GetAllPeers(discovery.PeerTimeout)
 	_ = json.NewEncoder(w).Encode(peers)
 }
 
@@ -157,6 +123,7 @@ func (s *Server) handlePeersAdd(w http.ResponseWriter, r *http.Request) {
 		Address string `json:"address"`
 		Name    string `json:"name"`
 	}
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Address == "" {
 		http.Error(w, "Invalid address specified", http.StatusBadRequest)
 		return
@@ -254,7 +221,11 @@ func (s *Server) handleMultipartUpload(w http.ResponseWriter, r *http.Request) {
 
 	// 32 MB in-memory boundary for multipart headers
 	totalLen, _ := strconv.ParseInt(r.Header.Get("Content-Length"), 10, 64)
-	progressReader := transfer.NewProgressReader(r.Body, totalLen, func(percent float64, speedMBps float64, etaSec int) {
+	progressReader := transfer.NewProgressReader(r.Body, totalLen, 0, func(speedMBps float64, etaSec int, sf int64, tf int64, cb int64, tb int64) {
+		percent := 0.0
+		if tb > 0 {
+			percent = float64(cb) / float64(tb) * 100.0
+		}
 		msg, _ := json.Marshal(map[string]interface{}{
 			"type":      "transfer_progress",
 			"percent":   percent,
@@ -262,7 +233,7 @@ func (s *Server) handleMultipartUpload(w http.ResponseWriter, r *http.Request) {
 			"etaSec":    etaSec,
 		})
 		s.broadcastSSE(string(msg))
-	})
+	}, nil)
 	r.Body = io.NopCloser(progressReader)
 
 	reader, err := r.MultipartReader()
@@ -363,7 +334,11 @@ func (s *Server) handleStreamUpload(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("\n[Receiver] Incoming stream transfer from %s...\n", senderName)
 
 	totalLen, _ := strconv.ParseInt(r.Header.Get("Content-Length"), 10, 64)
-	progressReader := transfer.NewProgressReader(r.Body, totalLen, func(percent float64, speedMBps float64, etaSec int) {
+	progressReader := transfer.NewProgressReader(r.Body, totalLen, 0, func(speedMBps float64, etaSec int, sf int64, tf int64, cb int64, tb int64) {
+		percent := 0.0
+		if tb > 0 {
+			percent = float64(cb) / float64(tb) * 100.0
+		}
 		msg, _ := json.Marshal(map[string]interface{}{
 			"type":      "transfer_progress",
 			"percent":   percent,
@@ -371,7 +346,7 @@ func (s *Server) handleStreamUpload(w http.ResponseWriter, r *http.Request) {
 			"etaSec":    etaSec,
 		})
 		s.broadcastSSE(string(msg))
-	})
+	}, nil)
 
 	fileCount, totalBytes, err := transfer.ExtractTar(progressReader, s.DownloadDir, nil)
 	if err != nil {

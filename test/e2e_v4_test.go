@@ -50,7 +50,7 @@ func TestE2EV4_QUIC_Transfer(t *testing.T) {
 	targetAddr := fmt.Sprintf("127.0.0.1:%d", port)
 	
 	// SendPaths blocks until done
-	err = client.SendPaths(targetAddr, []string{testFile}, "123456", "TestSender")
+	err = client.SendPaths([]string{targetAddr}, []string{testFile}, "123456", "TestSender")
 	if err != nil {
 		t.Fatalf("SendPaths failed: %v", err)
 	}

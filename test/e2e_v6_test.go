@@ -67,7 +67,7 @@ func TestE2EV6_DirectoryTransfer(t *testing.T) {
 	
 	// SendPaths blocks until done
 	startTime := time.Now()
-	err = client.SendPaths(targetAddr, []string{testDir}, "123456", "TestSender")
+	err = client.SendPaths([]string{targetAddr}, []string{testDir}, "123456", "TestSender")
 	if err != nil {
 		t.Fatalf("SendPaths failed: %v", err)
 	}

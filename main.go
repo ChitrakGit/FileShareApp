@@ -360,7 +360,7 @@ func runSend(args []string) {
 	}
 
 	hostname, _ := os.Hostname()
-	if err := client.SendPaths(target, paths, pin, hostname); err != nil {
+	if err := client.SendPaths([]string{target}, paths, pin, hostname); err != nil {
 		fmt.Printf("\nTransfer error: %v\n", err)
 		os.Exit(1)
 	}

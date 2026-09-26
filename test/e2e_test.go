@@ -66,7 +66,7 @@ func TestEndToEnd(t *testing.T) {
 			t.Fatalf("Failed to create test file: %v", err)
 		}
 
-		err = client.SendPaths("127.0.0.1:9099", []string{testFile}, "", "IntegrationTestClient")
+		err = client.SendPaths([]string{"127.0.0.1:9099"}, []string{testFile}, "", "IntegrationTestClient")
 		if err != nil {
 			t.Fatalf("Failed to send file: %v", err)
 		}
