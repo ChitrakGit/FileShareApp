@@ -1,0 +1,46 @@
+[
+  {
+    "deviceId": "device-1",
+    "deviceName": "Alice-PC",
+    "lanInfo": {
+      "ip": "192.168.1.100",
+      "port": 8990,
+      "protocol": "IPv4",
+      "subnet": "192.168.1.0/24",
+      "endpointUrl": "http://192.168.1.100:8990"
+    },
+    "systemInfo": {
+      "os": "windows",
+      "hostname": "Alice-PC"
+    },
+    "connection": {
+      "discoveryMethod": "UDP_BROADCAST",
+      "status": "ONLINE",
+      "firstSeen": "2026-09-11T00:56:22.4287923+05:30",
+      "lastSeen": "2026-09-11T13:25:54.6030317+05:30"
+    },
+    "totalTransfers": 0
+  },
+  {
+    "deviceId": "device-2",
+    "deviceName": "Bob-Mac",
+    "lanInfo": {
+      "ip": "192.168.1.101",
+      "port": 8990,
+      "protocol": "IPv4",
+      "subnet": "192.168.1.0/24",
+      "endpointUrl": "http://192.168.1.101:8990"
+    },
+    "systemInfo": {
+      "os": "darwin",
+      "hostname": "Bob-Mac"
+    },
+    "connection": {
+      "discoveryMethod": "UDP_BROADCAST",
+      "status": "ONLINE",
+      "firstSeen": "2026-09-11T00:56:22.4303926+05:30",
+      "lastSeen": "2026-09-11T13:25:54.6030317+05:30"
+    },
+    "totalTransfers": 0
+  }
+]

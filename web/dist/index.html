@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FileShare - Fast LAN & Wi-Fi File Transfer</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-background">
+    <div class="glow-orb glow-1"></div>
+    <div class="glow-orb glow-2"></div>
+  </div>
+
+  <div class="app-container">
+    <!-- Top Navigation Bar -->
+    <header class="top-nav">
+      <div class="brand">
+        <div class="logo-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="app-name">FileShare<span class="badge-tag">LAN</span></span>
+          <span class="app-tagline">Direct Peer-to-Peer Transfer</span>
+        </div>
+      </div>
+
+      <div class="nav-controls">
+        <div class="device-pill" id="localDevicePill" title="This device on the network">
+          <span class="status-dot pulsing"></span>
+          <span class="device-name" id="localDeviceName">Detecting...</span>
+          <span class="device-ip" id="localDeviceIp">...</span>
+          <button class="btn-icon-sm" id="btnCopyUrl" title="Copy LAN URL" style="margin-left: 8px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
+        </div>
+        <button class="btn-icon" id="btnQrCode" title="Pair Mobile Phone via QR Code">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          <span>Mobile Pair</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Top Tab Navigation -->
+    <nav class="pc-tab-nav">
+      <button class="pc-tab-btn active" onclick="switchViewPC('send', this)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"></path><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        Send
+      </button>
+      <button class="pc-tab-btn" onclick="switchViewPC('received', this)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Received
+      </button>
+      <button class="pc-tab-btn" onclick="switchViewPC('settings', this); fetchSettingsPC();">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </button>
+    </nav>
+
+    <!-- App Views -->
+    <div class="views-container">
+      
+      <!-- Send View -->
+      <section id="view-send" class="app-view active">
+        <main class="main-layout">
+          <!-- Left Column: Send & Receive Zone -->
+          <section class="transfer-section">
+            <!-- Dropzone Card -->
+            <div class="card dropzone-card" id="dropzone">
+              <div class="dropzone-content">
+                <div class="drop-icon-wrapper">
+                  <svg class="drop-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
+                    <path d="M12 12v9"></path>
+                    <path d="m8 16 4-4 4 4"></path>
+                  </svg>
+                </div>
+                <h3>Drag & Drop Files or Folders</h3>
+                <p class="subtitle">Supports multiple files or complete nested directory trees</p>
+
+                <div class="drop-actions">
+                  <label class="btn btn-primary" for="fileInput">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                    Select Files
+                  </label>
+                  <input type="file" id="fileInput" multiple style="display: none;">
+
+                  <label class="btn btn-secondary" for="folderInput">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                    Select Folder
+                  </label>
+                  <input type="file" id="folderInput" webkitdirectory directory multiple style="display: none;">
+                </div>
+              </div>
+            </div>
+
+            <!-- Selected Payload Summary (hidden by default) -->
+            <div class="card selection-card" id="selectionCard" style="display: none;">
+              <div class="card-header">
+                <div class="selection-meta">
+                  <h4 id="payloadTitle">0 items ready to send</h4>
+                  <span class="payload-size" id="payloadSize">0 KB</span>
+                </div>
+                <button class="btn-text text-danger" id="btnClearSelection">Clear</button>
+              </div>
+
+              <div class="selection-items-list" id="selectionList">
+                <!-- Populated via JS -->
+              </div>
+
+              <!-- Target Peer Selector & Actions -->
+              <div class="send-form">
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <label for="targetPeerSelect">Send to Device</label>
+                    <div style="display: flex; gap: 8px;">
+                      <select id="targetPeerSelect" class="form-control flex-1">
+                        <option value="">Choose a discovered peer...</option>
+                      </select>
+                      <button id="btnQuickAddDevice" class="btn btn-secondary" title="Add Device on the fly" style="padding: 0 12px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="form-group pin-group">
+                    <label for="optionalPin">Pairing PIN (Optional)</label>
+                    <input type="text" id="optionalPin" class="form-control" maxlength="6" placeholder="e.g. 123456">
+                  </div>
+                </div>
+
+                <button class="btn btn-primary btn-block btn-lg" id="btnSendPayload" disabled>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                  <span>Send to Selected Device</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Live Transfer Progress Card -->
+            <div class="card progress-card" id="transferProgressCard" style="display: none;">
+              <div class="card-header">
+                <div>
+                  <span class="badge" id="transferDirectionBadge">Sending</span>
+                  <h4 id="transferItemName">file.zip</h4>
+                </div>
+                <button class="btn-icon-sm" id="btnCancelTransfer" title="Cancel Transfer">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+
+              <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progressBarFill" style="width: 0%;"></div>
+              </div>
+
+              <div class="progress-stats">
+                <span id="transferPercentage">0%</span>
+                <span id="transferSpeed">0 MB/s</span>
+                <span id="transferTransferred">0 MB / 0 MB</span>
+                <span id="transferEta">ETA: --</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Right Column: Discovered Peers & Activity -->
+          <aside class="sidebar-section">
+            <!-- Discovered Peers Radar -->
+            <div class="card peers-card">
+              <div class="card-header">
+                <div class="header-title">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M16.2 7.8a6 6 0 0 1 0 8.4"></path><path d="M19.1 4.9a10 10 0 0 1 0 14.2"></path><circle cx="12" cy="12" r="1"></circle></svg>
+                  <h3>Nearby Devices</h3>
+                </div>
+                <button class="btn-icon-sm" id="btnRefreshPeers" title="Scan Wi-Fi / LAN">
+                  <svg class="spin-on-click" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                </button>
+              </div>
+
+              <div class="peers-list" id="peersList">
+                <div class="empty-peers">
+                  <div class="radar-animation">
+                    <div class="radar-circle"></div>
+                    <div class="radar-circle circle-2"></div>
+                  </div>
+                  <p>Scanning Wi-Fi for devices running FileShare...</p>
+                </div>
+              </div>
+
+              <!-- Manual IP Connect & Subnet Scanner -->
+              <div class="manual-connect-box">
+                <div class="connect-tabs">
+                  <span class="small-hint font-bold">Add Device (Across Routers / LAN)</span>
+                </div>
+                <div class="ip-input-group mb-2">
+                  <button class="btn btn-sm btn-secondary" id="btnScanQrCode" title="Scan QR Code" style="margin-right: 8px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect>
+                      <rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                  </button>
+                  <input type="text" id="manualPeerIp" placeholder="http://192.168.1.XX:8990" class="form-control form-control-sm flex-1">
+                  <input type="text" id="manualPeerName" placeholder="Name (e.g. Office PC)" class="form-control form-control-sm peer-name-input">
+                  <button class="btn btn-sm btn-primary" id="btnAddManualPeer">Save Device</button>
+                </div>
+                <div class="subnet-scan-group">
+                  <input type="text" id="scanSubnetInput" placeholder="Subnet (e.g. 192.168.1)" class="form-control form-control-sm">
+                  <button class="btn btn-sm btn-secondary" id="btnScanSubnet">Scan Subnet</button>
+                </div>
+                <div style="margin-top: 10px; display: flex; justify-content: center;">
+                  <button class="btn btn-sm btn-secondary" id="btnConfigureFirewall" style="width: 100%;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                    Configure Firewall (Windows)
+                  </button>
+                </div>
+                <p class="small-hint" id="peerActionStatus" style="display: none; margin-top: 6px;"></p>
+              </div>
+            </div>
+          </aside>
+        </main>
+      </section>
+
+      <!-- Received View -->
+      <section id="view-received" class="app-view" style="display: none;">
+        <div class="view-content-wrapper">
+          <div class="card history-card" style="min-height: 400px;">
+            <div class="card-header">
+              <div class="header-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <h3>Recent Transfers</h3>
+              </div>
+            </div>
+            <div class="history-list" id="historyList">
+              <div class="empty-history">
+                <p>No transfers yet in this session</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Settings View -->
+      <section id="view-settings" class="app-view" style="display: none;">
+        <div class="view-content-wrapper settings-wrapper">
+          <div class="card settings-card">
+            <div class="card-header">
+              <h3>Application Settings</h3>
+            </div>
+            
+            <details class="settings-section" open>
+              <summary>Storage Section</summary>
+              <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <input type="text" id="pcSetSaveDir" class="form-control" placeholder="C:\Downloads\FileShare">
+                <button class="btn btn-sm btn-secondary" onclick="fetchSettingsPC()">Refresh</button>
+              </div>
+            </details>
+
+            <details class="settings-section">
+              <summary>Server Section</summary>
+              <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <input type="text" id="pcSetMulticastAddr" class="form-control" placeholder="224.0.0.1">
+                <button class="btn btn-sm btn-secondary" onclick="fetchSettingsPC()">Refresh</button>
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <input type="number" id="pcSetMulticastPort" class="form-control" placeholder="53535">
+                <button class="btn btn-sm btn-secondary" onclick="fetchSettingsPC()">Refresh</button>
+              </div>
+              <button class="btn btn-danger mt-2" style="width: 100%;" onclick="alert('Restarting Server...');">Restart FileShare Server</button>
+            </details>
+
+            <details class="settings-section">
+              <summary>User & Device Info Section</summary>
+              <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <input type="text" id="pcSetDeviceName" class="form-control" placeholder="Device Name">
+              </div>
+              <div class="device-info mt-2">
+                <p id="pcInfoModel">Model: PC Desktop</p>
+                <p id="pcInfoOs">OS Name: Loading...</p>
+                <p id="pcInfoType">Type: Desktop PC</p>
+              </div>
+            </details>
+
+            <details class="settings-section">
+              <summary>Network Section</summary>
+              <div style="margin-top: 8px;">
+                <label class="small-hint">Blocked Ports (In/Out comma separated)</label>
+                <input type="text" id="pcSetBlockedPorts" class="form-control mt-2" placeholder="8080, 22">
+              </div>
+            </details>
+
+            <details class="settings-section">
+              <summary>Saved Devices Section</summary>
+              <div id="pcSavedDevicesList" style="margin-top: 8px;">
+                <p class="small-hint">No saved devices</p>
+              </div>
+            </details>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+              <button class="btn btn-secondary flex-1" onclick="setDefaultSettingsPC()">Set Defaults</button>
+              <button class="btn btn-primary flex-1" onclick="saveSettingsPC()">Save Settings</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- QR Code Modal for Mobile Pairing -->
+  <div class="modal-backdrop" id="qrModal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Connect Mobile Device</h3>
+        <button class="btn-icon-sm" id="btnCloseQrModal">&times;</button>
+      </div>
+      <div class="modal-body text-center">
+        <p class="modal-desc">Scan with your phone's camera to open FileShare directly on your mobile browser (same Wi-Fi required):</p>
+        <div class="qr-code-wrapper" id="qrCanvasContainer">
+          <img id="qrImage" alt="Wi-Fi QR Code" width="220" height="220">
+        </div>
+        <div class="url-badge" id="qrUrlText">http://...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR Code Scanner Modal -->
+  <div class="modal-backdrop" id="scannerModal" style="display: none;">
+    <div class="modal-card" style="width: 400px; max-width: 95%;">
+      <div class="modal-header">
+        <h3>Scan Device QR Code</h3>
+        <button class="btn-icon-sm" id="btnCloseScannerModal">&times;</button>
+      </div>
+      <div class="modal-body text-center">
+        <p class="modal-desc">Scan another device's "Mobile Pair" QR Code to instantly add it to your network.</p>
+        <div id="reader" width="100%" style="margin-top: 10px; border-radius: 8px; overflow: hidden;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Incoming Transfer Request Dialog Modal -->
+  <div class="modal-backdrop" id="incomingModal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="incoming-title">
+          <span class="incoming-indicator"></span>
+          <h3>Incoming File Transfer</h3>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="sender-info-box">
+          <span class="label">From Device:</span>
+          <strong id="incomingSenderName">Alice's Laptop</strong>
+          <span class="sender-ip" id="incomingSenderIp">(192.168.1.45)</span>
+        </div>
+
+        <div class="transfer-manifest">
+          <div class="manifest-stat">
+            <span class="stat-num" id="incomingFileCount">1</span>
+            <span class="stat-label">Items</span>
+          </div>
+          <div class="manifest-stat">
+            <span class="stat-num" id="incomingTotalSize">45 MB</span>
+            <span class="stat-label">Total Size</span>
+          </div>
+        </div>
+
+        <p class="manifest-detail" id="incomingItemName">project-files.tar</p>
+
+        <div class="pin-verification-box" id="pinVerificationBox" style="display: none;">
+          <label>Security PIN Required:</label>
+          <input type="text" id="incomingPinInput" class="form-control text-center" maxlength="6" placeholder="Enter 6-digit PIN">
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-danger" id="btnRejectTransfer">Decline</button>
+          <button class="btn btn-primary btn-lg" id="btnAcceptTransfer">Accept & Download</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Add Device Modal -->
+  <div class="modal-backdrop" id="quickAddModal" style="display: none;">
+    <div class="modal-card" style="width: 400px; max-width: 95%;">
+      <div class="modal-header">
+        <h3>Add Device Manually</h3>
+        <button class="btn-icon-sm" id="btnCloseQuickAddModal">&times;</button>
+      </div>
+      <div class="modal-body text-center">
+        <p class="modal-desc">Enter the LAN IP address or URL of the target device.</p>
+        <div class="form-group" style="text-align: left; margin-top: 15px;">
+          <label for="quickAddIp">Device URL or IP Address</label>
+          <input type="text" id="quickAddIp" class="form-control" placeholder="http://192.168.1.XX:8990">
+        </div>
+        <div class="form-group" style="text-align: left;">
+          <label for="quickAddName">Optional Name</label>
+          <input type="text" id="quickAddName" class="form-control" placeholder="e.g. John's MacBook">
+        </div>
+        <div style="margin-top: 20px; display: flex; gap: 10px;">
+          <button class="btn btn-secondary flex-1" id="btnCancelQuickAdd">Cancel</button>
+          <button class="btn btn-primary flex-1" id="btnConfirmQuickAdd">Add Device</button>
+        </div>
+        <p class="small-hint" id="quickAddStatus" style="display: none; margin-top: 10px;"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Drawer UI for Wails Desktop Mode -->
+  <div id="drawerContainer" class="drawer-container" style="display: none;">
+    <div class="drawer-hover-overlay" onclick="expandDrawerApp()">
+      <div class="expand-icon-wrapper">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+        <span>Open App</span>
+      </div>
+    </div>
+    <div class="drawer-header">
+      <div class="drawer-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+        <span>FileShare Drawer</span>
+      </div>
+      <button class="btn-icon-sm" id="btnRestoreUi" title="Restore Dashboard">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+      </button>
+    </div>
+    
+    <div class="drawer-content">
+      <p class="drawer-hint">Drop files onto a device</p>
+      <div class="drawer-peers-list" id="drawerPeersList">
+        <!-- Peers will be grouped here as SVG icons -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Wails JS API (injected automatically in Wails env, but safe to include) -->
+  <script src="/wails/ipc.js" onerror="this.onerror=null; this.remove();"></script>
+
+  <script src="js/html5-qrcode.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

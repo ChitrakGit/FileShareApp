@@ -1,0 +1,75 @@
+V2.
+1. save tha all connected device with device ID and LAN collection info and other important things in a json file inside store directory. If possible save the mac address of those devices to identify quicly. 
+2. user can directly add device using lan url with port. every user can see there URL and PORT. that share to another user.
+3. user can see the upload and download speed while transfer the files or folders.
+4. All recived file by default save in C:/Users/Public/Documents/FileShare.
+5. for peer to peer connection if firewall need to be allowed. user can allowed onece and it parmanently allowed by firewall. Nextime It never should ask for permissions.
+ *** done ***
+
+v3.
+1. use QR code to connect devices. user can share QR code to another user and the user can scan the QR code to connect to the device.
+2. for add device user can copy  URL  from the app and paste it on the add device section.
+3. for Linux, mac and windows all device can connect.
+*** done ***
+
+
+v4. 
+1. Make an desktopapp over it and use an icon from proper icon/ directory.
+2. user can install it and can run it always. If user close it it by default run in taskbar and also run at startup.
+3. user can check and uncheck that app will always run in taskbar and also run at startup.
+4. user can right click and can close the app from taskbar.
+5. while hide in taskbar, it also float in screen at top right conner like slight drawer(design like glassmorphism). when mouse hover in this the drawer open and show multiple attached devices, where user can drag and drop files then autometically those files will be recived by that desitination device. while drag and drop, also show progress bar of the file transfer.
+6. the app should use quic to transfer files for better performance.
+7. the app should use local network to transfer files for better performance.
+8. "show multiple attached devices"[check device connection while showing] here show PC icon for PC and Tablet Icon for tablet and mobile Icon for mobile. change the icon color with green and gray.
+9. "show multiple attached devices" if same device show multiple use number on the device icon with gray background and number. e.g if two mobile devices connected show mobile icon with 2 on the device icon. the number is red if the device is disconnected and green if the device is connected.
+10. user can search the application as Name "FileShare" in menu.
+ ** done **
+
+ V5. 
+ 1. while selecting device for upload or download show an add device icon also, by clicking on it user can add device on the fly. but to add that device it must be on same LAN Network.
+ 2. make it for linux and mac os also.  
+ ** done **
+
+ v6.
+ A. Android App
+    1. 3 pages [Send, recived, settings].
+    2. user can switch pages from bottom of the screen.
+    3. On bottom of the screen 3 icons Send, recived, settings.
+    4. in send page show connected devices with their QR code and show files while sending with speed.
+    5. in recived page show all files or folders recived by user with speed.
+    6. Create checksums while transfer files and verify it after transfer complete. 
+    7. in settings page show all settings like 
+        * changed save directory -- storage section
+        * restart server [FileShare server] -- server section
+        * update device name [by default it will be random user names] -- user section
+        * show multicast address and port [user can change it] -- server section
+        * Show device model, OS name, and OS version, device type [TABLET, SMART Phone]. in "Device Info" section. -- user section
+        * In network tab [user can block any port(to recieve file) and any port(to send file)] -- network section
+        * Saved devices- Devices section. User can block,unblock and remove saved device.
+
+        -- use section view for each type of information and user can expand and collasp as needed.
+        and keep a button to set default settings.
+        -- at the right side of each setting there show a refresh button [except name]. if user click on it it will refresh the setting.
+** done **        
+
+V7. PC app[windows, mac, linux]
+    1. Create checksums while transfer files and verify it after transfer complete. 
+    2. in settings page show all settings like 
+        * changed save directory
+        * restart server [FileShare server] -- server section
+        * update device name [by default it will be random user names] -- user section
+        * show multicast address and port [user can change it] -- server section
+        * Show device model, OS name, and OS version, device type [TABLET, SMART Phone]. in "Device Info" section. -- user section
+        * In network tab [user can block any port(to recieve file) and any port(to send file)] -- network section
+
+        -- use section view for each type of information and user can expand and collasp as needed.
+        and keep a button to set default settings.
+        -- at the right side of each setting there show a refresh button [except name]. if user click on it it will refresh the setting.
+** done **  
+
+v7.1
+    1.In PC builds make a app view for send file, recived file and settings. same as android app.
+    2. An Icon in floating drawer in PC have the OPEN app ison so user hover on the sloder and see the Icon and can open it and open the full app.
+
+** done **
