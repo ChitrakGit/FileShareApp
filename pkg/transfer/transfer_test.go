@@ -38,7 +38,7 @@ func TestStreamAndExtractTarRoundTrip(t *testing.T) {
 
 	// 3. Stream to tar buffer
 	var buf bytes.Buffer
-	err = StreamTar(items, &buf, nil)
+	err = StreamTar(items, err = StreamTar(items, &buf, nil)buf, nil, nil)
 	if err != nil {
 		t.Fatalf("StreamTar failed: %v", err)
 	}
